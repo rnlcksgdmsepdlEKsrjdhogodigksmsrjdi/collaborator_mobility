@@ -1,17 +1,10 @@
 # mobility
 
-A new Flutter project.
+조선대학교 내의 전기차 충전소 예약 및 위치 확인 관련 앱 제작
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+플러터를 사용해서 만들고 있어 플러터에 대한 기초 설정이 필요합니다.
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+**플터터 설정**
 "# mobility" 
