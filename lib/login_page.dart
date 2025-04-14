@@ -79,7 +79,7 @@ class _LoginPageState extends State<LoginPage> {
     await NaverLoginSDK.authenticate(
       callback: OAuthLoginCallback(
         onSuccess: () async {
-          // 1. 프로필 조회 (주신 콜백 구조 100% 반영)
+          // 1. 프로필 조회
           await NaverLoginSDK.profile(
             callback: ProfileCallback(
               onSuccess: (resultCode, message, response) async {
@@ -95,21 +95,21 @@ class _LoginPageState extends State<LoginPage> {
                 final naverId = profile.id ?? 'default_naver_id';
                 final email = profile.email ?? '$naverId@naver.com';
 
-                // 4. Firebase 연동
+                // 3. Firebase 연동 - 토큰화
                 final accessToken = await NaverLoginSDK.getAccessToken(); // String 직접 반환
                 final customToken = await _getFirebaseCustomToken(
-                  accessToken: accessToken, // ✅ String 타입 바로 사용
+                  accessToken: accessToken, 
                   naverId: naverId,
                   email: email,
                 );
-                await FirebaseAuth.instance.signInWithCustomToken(customToken);
+                await FirebaseAuth.instance.signInWithCustomToken(customToken); // Firebase 인증 관련된 함수로 토큰받아 진행
 
-                // 5. 성공 알림
+                // 4. 성공 알림
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text("네이버 로그인 성공!")),
                 );
 
-                // 6. 프로필 상세 출력 (디버깅)
+                // 5. 프로필 상세 출력 (디버깅) - 확인용
                 print('''
                   🟢 최종 파싱된 프로필
                   - ID: ${profile.id}
@@ -138,18 +138,18 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-  // ✅ Firebase 커스텀 토큰 요청
+  //  Firebase 커스텀 토큰 요청 - 네이버 API -> Firebase로 값을 보냄
   Future<String> _getFirebaseCustomToken({
   required String accessToken,
   required String naverId,
   required String email,
 }) async {
-  const functionUrl = "https://naverlogin-ov5rbv4c3q-du.a.run.app";
+  const functionUrl = "https://naverlogin-ov5rbv4c3q-du.a.run.app"; // 네이버 API 관련 url - 상수
 
   try {
     final response = await http.post(
       Uri.parse(functionUrl),
-      headers: {'Content-Type': 'application/json'},
+      headers: {'Content-Type': 'application/json'}, // json으로 보냄
       body: jsonEncode({
         'accessToken': accessToken,
         'naverId': naverId,
@@ -157,7 +157,7 @@ class _LoginPageState extends State<LoginPage> {
       }),
     );
 
-    // ✅ 응답 검증 강화
+    //  응답 검증 강화
     if (response.statusCode == 200) {
       final responseData = jsonDecode(response.body);
       final token = responseData['token'] ?? responseData['customToken'];
@@ -171,10 +171,11 @@ class _LoginPageState extends State<LoginPage> {
     }
   } catch (e) {
     print('🔥 커스텀 토큰 요청 실패: $e');
-    throw Exception('토큰 발급 실패: $e'); // 반드시 rethrow
+    throw Exception('토큰 발급 실패: $e'); 
   }
 }
 
+// 앱화면 구조
   @override
   Widget build(BuildContext context) {
     return Scaffold(

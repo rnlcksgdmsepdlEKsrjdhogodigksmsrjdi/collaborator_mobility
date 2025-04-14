@@ -1,9 +1,14 @@
+/* 
+Firebase Functions 관련 함수 지정 
+건들지 말아주세요
+*/
+
 import * as functions from "firebase-functions/v2";
 import * as admin from "firebase-admin";
 import { setGlobalOptions } from "firebase-functions/v2/options";
 import { Request, Response } from "express";
 
-// 리전 설정
+// Firebase functions을 위해 IAM 지역 / functions 지역 동기화
 setGlobalOptions({ region: "asia-northeast3" });
 const serviceAccount = require("../mobility-1997a-firebase-adminsdk-fbsvc-971110be01.json");
 admin.initializeApp({
