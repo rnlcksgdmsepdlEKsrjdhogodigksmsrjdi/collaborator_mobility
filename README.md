@@ -4,21 +4,19 @@
 
 ## 기초 설정
 
-- 플러터 설정
+- 플러터 설정 <br>
 플러터를 사용해서 만들고 있어 플러터에 대한 기초 설정이 필요합니다.
 [플러터 설치 및 설정](https://docs.flutter.dev/get-started/install?_gl=1*1e6o7pb*_up*MQ..*_ga*MjA1OTY4MTEyOS4xNzQ0NjAzNzA0*_ga_04YGWK0175*MTc0NDYwMzcwMy4xLjAuMTc0NDYwMzcwMy4wLjAuMA..)
 
-플러터 버전 : 3.29.2
-다트 버전: 3.7.2
-기준으로 쓰여졌습니다.
+플러터 버전 : 3.29.2 <br>
+다트 버전: 3.7.2 <br>
 
 - 안드로이드 설정
-[안드로이드 스튜디오 설치 및 설정](https://developer.android.com/studio?hl=ko)
+    [안드로이드 스튜디오 설치 및 설정](https://developer.android.com/studio?hl=ko) <br>
+    안드로이드 스튜디오 버전 : Android Studio Meerkat | 2024.3.1 <br>
 
-안드로이드 스튜디오 버전 : Android Studio Meerkat | 2024.3.1
-
-- iOS 설정
-아직 iOS 파트를 구현하지 않아서 설정하지 않음.
+- iOS 설정 <br>
+    아직 iOS 파트를 구현하지 않아서 설정하지 않음.
 
 ## 기능 구현 내용
 ### 로그인
