@@ -14,9 +14,11 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  // 이메일 / 패스워드 입력 컨트롤러 관련 
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
+  // 에러 메세지 함수
   void _showError(String message) {
     if (!mounted) return; // 위젯이 unmount된 경우 방지
     
@@ -29,7 +31,7 @@ class _LoginPageState extends State<LoginPage> {
     print('에러 발생: $message'); // 콘솔 로깅
   }
   
-  // 이메일/비밀번호 로그인
+  // 이메일/비밀번호 직접 설정해서 가입하는 함수
   Future<void> signInWithEmail() async {
     try {
       final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
@@ -71,7 +73,7 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  // ✅ 네이버 로그인
+  // 네이버 로그인
   Future<void> signInWithNaver() async {
   try {
     await NaverLoginSDK.authenticate(
