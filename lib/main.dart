@@ -8,9 +8,9 @@ import 'package:naver_login_sdk/naver_login_sdk.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(); // Firebase 초기화
-
+  
   NaverLoginSDK.initialize(
-    clientId: 'IGdjiddEnJx86dWfnGW0',        // 네이버 개발자 센터에서 받은 clientId
+    clientId: 'IGdjiddEnJx86dWfnGW0',        // 네이버 개발자 센터에서 받은 clientId 
     clientSecret: 'dX02epXz4L',// 네이버 개발자 센터에서 받은 clientSecret
   );
   runApp(const MyApp());

@@ -10,7 +10,7 @@ import { Request, Response } from "express";
 
 // Firebase functions을 위해 IAM 지역 / functions 지역 동기화
 setGlobalOptions({ region: "asia-northeast3" });
-const serviceAccount = require("../mobility-1997a-firebase-adminsdk-fbsvc-971110be01.json");
+const serviceAccount = require("../firebase_sdk_setting.json");
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
