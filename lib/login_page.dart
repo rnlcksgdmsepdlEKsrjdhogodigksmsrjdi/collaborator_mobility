@@ -5,12 +5,27 @@ import 'package:mobility/sign_in_page.dart';
 import 'package:naver_login_sdk/naver_login_sdk.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:firebase_database/firebase_database.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
+}
+
+Future<void> saveUserData(User user) async {
+  final databaseRef = FirebaseDatabase.instance.ref();
+  final userRef = databaseRef.child('users/${user.uid}');
+
+  // 새로운 데이터가 있다면 update 없다면 그냥 유지
+  await userRef.update({
+    'email': user.email ?? '',
+    'displayName': user.displayName ?? '',
+    'uid': user.uid,
+    'provider': user.providerData.isNotEmpty ? user.providerData[0].providerId : '',
+    'lastLogin': DateTime.now().toIso8601String()
+  });
 }
 
 class _LoginPageState extends State<LoginPage> {
@@ -46,7 +61,7 @@ class _LoginPageState extends State<LoginPage> {
         );
         return;
       }
-
+      await saveUserData(credential.user!);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("로그인 성공!")),
       );
@@ -67,7 +82,8 @@ class _LoginPageState extends State<LoginPage> {
         idToken: googleAuth.idToken,
       );
 
-      await FirebaseAuth.instance.signInWithCredential(credential);
+      final UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      await saveUserData(userCredential.user!); 
     } catch (e) {
       _showError("구글 로그인 실패: ${e.toString()}");
     }
@@ -103,6 +119,10 @@ class _LoginPageState extends State<LoginPage> {
                   email: email,
                 );
                 await FirebaseAuth.instance.signInWithCustomToken(customToken); // Firebase 인증 관련된 함수로 토큰받아 진행
+                final user = FirebaseAuth.instance.currentUser;
+                if (user != null) {
+                  await saveUserData(user);
+                }
 
                 // 4. 성공 알림
                 ScaffoldMessenger.of(context).showSnackBar(

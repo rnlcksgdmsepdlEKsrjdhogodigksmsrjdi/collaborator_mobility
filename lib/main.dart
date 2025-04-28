@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'login_page.dart';
 import 'home_page.dart';
 import 'package:naver_login_sdk/naver_login_sdk.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
