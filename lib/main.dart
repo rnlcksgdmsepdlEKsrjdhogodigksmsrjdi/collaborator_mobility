@@ -8,15 +8,13 @@ import 'package:naver_login_sdk/naver_login_sdk.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(); // Firebase 초기화
-
-  // 네이버 로그인 SDK 초기화
-  NaverLoginSDK.initialize(
+  await Firebase.initializeApp();
+  await NaverLoginSDK.initialize(
     clientId: 'IGdjiddEnJx86dWfnGW0',
     clientSecret: 'dX02epXz4L',
   );
   
-  runApp(const MyApp());
+  runApp(const MyApp()); 
 }
 
 class MyApp extends StatelessWidget {
@@ -24,69 +22,97 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ScreenUtil 초기화를 MaterialApp 상위에 배치
-    return ScreenUtilInit(
-      designSize: const Size(390, 844), // 디자인 기기 크기 (iPhone 13 기준)
+    return ScreenUtilInit( // ✅ ScreenUtilInit은 MyApp 내부에서
+      designSize: const Size(390, 844),
       minTextAdapt: true,
-      splitScreenMode: true,
-      builder: (context, child) {
+      builder: (_, child) {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
-          title: 'PIKA.EV',
-          theme: ThemeData(
-            primarySwatch: Colors.blue,
-          ),
-          home: child,
+          home: const AppStartupScreen(), // Splash + 인증 체크를 담당하는 새 위젯
         );
       },
-      child: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const SplashScreen(); // 로딩 화면으로 변경
-          } else if (snapshot.hasData) {
-            return const HomePage();
-          } else {
-            return const LoginPage();
-          }
-        },
-      ),
     );
   }
 }
+
+// 수정된 AppStartupScreen 코드
+class AppStartupScreen extends StatefulWidget {
+  const AppStartupScreen({super.key});
+
+  @override
+  State<AppStartupScreen> createState() => _AppStartupScreenState();
+}
+
+class _AppStartupScreenState extends State<AppStartupScreen> {
+  late final Future<bool> _initialization;
+
+  @override
+  void initState() {
+    super.initState();
+    _initialization = _initializeApp();
+  }
+
+  Future<bool> _initializeApp() async {
+    try {
+      await Firebase.initializeApp();
+      debugPrint('✅ Firebase 초기화 성공');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Firebase 초기화 실패: $e');
+      return false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: _initialization,
+      builder: (context, snapshot) {
+        // 1. 초기화 중에는 스플래시 화면 유지
+        if (!snapshot.hasData) {
+          return const SplashScreen();
+        }
+
+        // 2. Firebase 초기화 실패 시 에러 화면
+        if (snapshot.data == false) {
+          return const Center(child: Text('Firebase 연결 실패'));
+        }
+
+        // 3. 인증 상태 확인
+        return StreamBuilder<User?>(
+          stream: FirebaseAuth.instance.authStateChanges(),
+          builder: (context, authSnapshot) {
+            debugPrint('🔑 인증 상태: ${authSnapshot.connectionState}');
+            debugPrint('👤 사용자 UID: ${authSnapshot.data?.uid ?? "null"}');
+
+            if (authSnapshot.connectionState == ConnectionState.active) {
+              return authSnapshot.hasData ? const HomePage() : const LoginPage();
+            }
+            return const SplashScreen(); // 인증 체크 중
+          },
+        );
+      },
+    );
+  }
+}
+
+
 
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // ScreenUtil 사용을 위해 context 필요
-    return Scaffold(
-      body: Container(
-        width: 390.w, // .w로 너비 지정
-        height: 844.h, // .h로 높이 지정
-        decoration: BoxDecoration(
-          color: const Color.fromRGBO(3, 3, 97, 1),
-        ),
-        child: Stack(
-          children: <Widget>[
-            Positioned(
-              top: 393.h, // .h로 위치 지정
-              left: 84.w, // .w로 위치 지정
-              child: Text(
-                'PIKA.EV',
-                textAlign: TextAlign.left,
-                style: TextStyle(
-                  color: const Color.fromRGBO(255, 255, 255, 1),
-                  fontFamily: 'Gmarket Sans TTF',
-                  fontSize: 50.sp, // .sp로 폰트 크기 지정
-                  letterSpacing: 0,
-                  fontWeight: FontWeight.normal,
-                  height: 1,
-                ),
-              ),
-            ),
-          ],
+    return Container(
+      color: const Color(0xFF030361), // RGBO(3, 3, 97)
+      child: Center(
+        child: Text(
+          'PIKA.EV',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 50.sp,
+            fontFamily: 'Gmarket Sans TTF',
+          ),
         ),
       ),
     );

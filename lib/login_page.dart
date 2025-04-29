@@ -353,7 +353,7 @@ class _LoginPageState extends State<LoginPage> {
               top: 506.h,
               left: 20.w,
               child: GestureDetector(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SignUpPage())),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SignUpScreen())),
                 child: Container(
                   width: 350.w,
                   height: 41.h,
