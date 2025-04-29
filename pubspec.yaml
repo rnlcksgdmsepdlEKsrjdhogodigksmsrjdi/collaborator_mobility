@@ -37,6 +37,7 @@ dependencies:
   naver_login_sdk: ^2.0.0
   firebase_database: ^11.3.5
   flutter_svg: ^2.1.0
+  flutter_screenutil: ^5.9.3
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
@@ -60,16 +61,16 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   assets:
-    - lib/assets/images/
+    - assets/images/
 
   fonts:
     - family: Gmarket Sans TTF
       fonts:
-        - asset: lib/assets/fonts/GmarketSansTTFMedium.ttf
+        - asset: assets/fonts/GmarketSansTTFMedium.ttf
       
     - family: Paperlogy
       fonts:
-        - asset: lib/assets/fonts/Paperlogy-3Light.ttf
+        - asset: assets/fonts/Paperlogy-3Light.ttf
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
