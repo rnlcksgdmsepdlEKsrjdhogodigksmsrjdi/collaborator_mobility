@@ -10,9 +10,12 @@ import 'package:http/http.dart' as http;
 import 'package:firebase_database/firebase_database.dart';
 import 'dart:math' as math;
 
+import 'home_page.dart';
+
+// UserData DB 저장
 Future<void> saveUserData(User user) async {
   final databaseRef = FirebaseDatabase.instance.ref();
-  final userRef = databaseRef.child('users/${user.uid}');
+  final userRef = databaseRef.child('users/${user.uid}/basicInfo');
 
   await userRef.update({
     'email': user.email ?? '',
@@ -30,9 +33,25 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
+// LoginPage의 기본적인 상태 정의 
 class _LoginPageState extends State<LoginPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+
+  @override
+  void dispose(){
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _navigateToHome() async {
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const HomePage()),
+    );
+  }
 
   void _showError(String message) {
     if (!mounted) return;
@@ -46,6 +65,7 @@ class _LoginPageState extends State<LoginPage> {
     print('에러 발생: $message');
   }
   
+  // 이메일 로그인
   Future<void> signInWithEmail() async {
     try {
       final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
@@ -55,12 +75,15 @@ class _LoginPageState extends State<LoginPage> {
 
       if (!credential.user!.emailVerified) {
         await FirebaseAuth.instance.signOut();
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("이메일 인증을 완료해주세요.")),
         );
         return;
       }
       await saveUserData(credential.user!);
+      await _navigateToHome();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("로그인 성공!")),
       );
@@ -69,6 +92,7 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  // 구글 로그인
   Future<void> signInWithGoogle() async {
     try {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
@@ -82,11 +106,14 @@ class _LoginPageState extends State<LoginPage> {
 
       final UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
       await saveUserData(userCredential.user!); 
+      await _navigateToHome();
+      if (!mounted) return;
     } catch (e) {
       _showError("구글 로그인 실패: ${e.toString()}");
     }
   }
 
+  // 네이버 로그인
   Future<void> signInWithNaver() async {
     try {
       await NaverLoginSDK.authenticate(
@@ -109,7 +136,9 @@ class _LoginPageState extends State<LoginPage> {
                   final user = FirebaseAuth.instance.currentUser;
                   if (user != null) {
                     await saveUserData(user);
+                    await _navigateToHome();
                   }
+                  if (!mounted) return;
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("네이버 로그인 성공!")),
@@ -171,7 +200,7 @@ class _LoginPageState extends State<LoginPage> {
       throw Exception('토큰 발급 실패: $e'); 
     }
   }
-
+  // 디자인 파트
   @override
   Widget build(BuildContext context) {
     return Scaffold(

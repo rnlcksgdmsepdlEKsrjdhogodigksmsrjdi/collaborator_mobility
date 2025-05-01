@@ -44,6 +44,8 @@ dependencies:
   http: ^1.3.0
 
 dev_dependencies:
+  flutter_native_splash: ^2.4.6
+  
   flutter_test:
     sdk: flutter
   
@@ -54,7 +56,13 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
-
+  
+flutter_native_splash:
+  color: "#030361" # 배경색
+  android_gravity: center
+  ios_content_mode: center
+  android: true
+  ios: true
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 

@@ -158,7 +158,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     child: TextField(
                       controller: _passwordController,
                       obscureText: true,
-                      obscuringCharacter: '*', // * 마스킹 추가
+                      obscuringCharacter: '*', 
                       style: TextStyle(
                         color: Colors.black,
                         fontFamily: 'Paperlogy',
@@ -203,7 +203,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     child: TextField(
                       controller: _confirmPasswordController,
                       obscureText: true,
-                      obscuringCharacter: '*', // * 마스킹 추가
+                      obscuringCharacter: '*', 
                       style: TextStyle(
                         color: Colors.black,
                         fontFamily: 'Paperlogy',
