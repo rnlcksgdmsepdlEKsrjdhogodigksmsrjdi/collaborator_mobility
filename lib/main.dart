@@ -31,7 +31,7 @@ class MyApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           home: const SplashEntryScreen(),
           routes: {
-            '/home': (context) => const HomePage(),
+            '/home': (context) => const MapWithBottomSheetPage(),
           },
         );
       },
@@ -109,7 +109,7 @@ class AppStartupScreen extends StatelessWidget {
             }
 
             return infoSnapshot.data == true
-                ? const HomePage()
+                ? const MapWithBottomSheetPage()
                 : UserInfoScreen(userId: user.uid);
           },
         );
