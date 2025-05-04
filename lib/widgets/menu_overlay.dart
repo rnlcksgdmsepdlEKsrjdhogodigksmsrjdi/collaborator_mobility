@@ -136,8 +136,13 @@ class MenuOverlay extends StatelessWidget {
           Positioned(
             top: 0.h,
             left: 0.w,
-            child: SvgPicture.asset('assets/images/Rectangle 18.svg'),
+            child: Container(
+              width: 333.w, // SVG의 width
+              height: 844.h, // SVG의 height
+              color: Colors.white, // fill="white"
+            ),
           ),
+
 
           Positioned(
             top: 68.h, // 기존보다 살짝 내려줌
