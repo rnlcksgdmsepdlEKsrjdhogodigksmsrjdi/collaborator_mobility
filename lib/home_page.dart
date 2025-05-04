@@ -57,6 +57,22 @@ class _MapWithBottomSheetPageState extends State<MapWithBottomSheetPage>
     ));
   }
 
+  // 로그아웃 함수 구현
+  Future<void> _logoutUser() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/login'); // 로그인 화면으로 이동
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('로그아웃 실패: ${e.toString()}'))
+        );
+      }
+    }
+  }
+
   Future<void> _loadUserName() async {
   if (_isLoading) return;
   
@@ -161,7 +177,7 @@ class _MapWithBottomSheetPageState extends State<MapWithBottomSheetPage>
           ),
           
           Positioned(
-            top: 40.h,
+            top: 50.h,
             left: 20.w,
             child: GestureDetector(
               onTap: _openMenu,
@@ -198,6 +214,7 @@ class _MapWithBottomSheetPageState extends State<MapWithBottomSheetPage>
                 },
                 child: MenuOverlay(
                   onClose: _closeMenu,
+                  onLogout: _logoutUser,
                   userName: _userName ?? '이름 없음',
                 ),
               ),

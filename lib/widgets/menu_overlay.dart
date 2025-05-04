@@ -6,10 +6,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 class MenuOverlay extends StatelessWidget {
   final VoidCallback onClose;
   final String userName; // 상위에서 받은 이름 직접 사용
+  final VoidCallback onLogout;
 
   const MenuOverlay({
     super.key, 
     required this.onClose,
+    required this.onLogout,
     required this.userName,
   });
 
@@ -62,7 +64,13 @@ class MenuOverlay extends StatelessWidget {
           Positioned(
             top: 260.h, 
             left: 29.w, 
-            child: _text('로그아웃', 17.sp, const Color(0xFF030361), 1.17)
+            child: GestureDetector(
+              onTap: () {
+                onLogout();
+                onClose();
+              },
+              child: _text('로그아웃', 17.sp, const Color(0xFF030361), 1.17)
+            ),
           ),
           Positioned(
             top: 287.h, 
