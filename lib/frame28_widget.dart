@@ -65,7 +65,7 @@ class Frame28Widget extends StatelessWidget {
                   barrierLabel: "팝업",
                   barrierColor: const Color.fromRGBO(0, 0, 0, 0.4),
                   transitionDuration: const Duration(milliseconds: 300),
-                  pageBuilder: (context, anim1, anim2) {
+                  pageBuilder: (context, anim1, anim2) { 
                     return const SizedBox();
                   },
                   transitionBuilder: (context, anim1, anim2, child) {
