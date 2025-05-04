@@ -65,7 +65,7 @@ class _CustomPopupState extends State<CustomPopup>
   Widget build(BuildContext context) {
     final data = labelData[widget.label] ??
         {'name': '알 수 없음', 'address': '-', 'charger': '-'};
-    print('data: $data');
+
     return Center(
       child: ScaleTransition(
         scale: _scaleAnimation,
@@ -79,7 +79,9 @@ class _CustomPopupState extends State<CustomPopup>
               color: Colors.white,
               borderRadius: BorderRadius.circular(20.r),
               border: Border.all(
-                  color: const Color.fromRGBO(217, 217, 217, 1), width: 1),
+                color: const Color.fromRGBO(217, 217, 217, 1),
+                width: 1,
+              ),
             ),
             child: Stack(
               children: <Widget>[
@@ -170,33 +172,37 @@ class _CustomPopupState extends State<CustomPopup>
                     ],
                   ),
                 ),
-                Positioned(
-                  top: 182.h,
-                  left: (270 - 87) / 2.w,
-                  child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 87.w,
-                      height: 43.h,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10.r),
-                        color: const Color.fromRGBO(3, 3, 97, 1),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        '확인',
-                        style: TextStyle(
-                          fontFamily: 'Paperlogy',
-                          fontSize: 22.sp,
-                          letterSpacing: -0.5,
-                          height: 1,
-                          color: Colors.white,
-                          decoration: TextDecoration.none,
+
+                // 확인 버튼 정중앙 정렬
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: 17.h),
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        width: 87.w,
+                        height: 43.h,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10.r),
+                          color: const Color.fromRGBO(3, 3, 97, 1),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          '확인',
+                          style: TextStyle(
+                            fontFamily: 'Paperlogy',
+                            fontSize: 22.sp,
+                            letterSpacing: -0.5,
+                            height: 1,
+                            color: Colors.white,
+                            decoration: TextDecoration.none,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                )
+                ),
               ],
             ),
           ),

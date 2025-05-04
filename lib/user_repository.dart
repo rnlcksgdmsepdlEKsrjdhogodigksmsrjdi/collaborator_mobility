@@ -20,6 +20,31 @@ class UserRepository {
     });
   }
 
+Future<String?> getUserEmail(String userId) async{
+  try {
+    final snapshot = await _db.child('users/$userId/basicInfo/email').get();
+
+    if(!snapshot.exists){
+      debugPrint('데이터가 존재하지 않습니다');
+      return null;
+    }
+
+    final email = snapshot.value;
+    if(email is String){
+      return email;
+    }
+    else {
+      debugPrint('이메일 데이터 형식이 잘못되었습니다');
+      return null;
+    }
+  }
+  catch (e, stackTrace){
+    debugPrint('Error loading email: $e');
+    debugPrint('Stack trace: $stackTrace');
+    return null;
+  }
+}
+
   // 사용자 추가 정보 불러오기
   // user_repository.dart
 Future<Map<String, dynamic>?> getUserAdditionalInfo(String userId) async {

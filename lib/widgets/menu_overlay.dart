@@ -1,11 +1,13 @@
-import 'dart:math' as math;
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../my_page_screen.dart';
+
 class MenuOverlay extends StatelessWidget {
   final VoidCallback onClose;
-  final String userName; // 상위에서 받은 이름 직접 사용
+  final String userName;
   final VoidCallback onLogout;
 
   const MenuOverlay({
@@ -17,6 +19,7 @@ class MenuOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
     return Container(
       width: 333.w,
       height: 844.h,
@@ -30,59 +33,82 @@ class MenuOverlay extends StatelessWidget {
             child: SvgPicture.asset('assets/images/Rectangle 18.svg'),
           ),
 
-          // 사용자 이름 (상위에서 받은 값 직접 표시)
           Positioned(
-            top: 58.h,
-            left: 29.w,
-            child: _text(userName, 30.sp, Colors.black, 0.66),
-          ),
-
-          // 기타 UI 요소들
-          Positioned(
-            top: 87.h, 
-            left: 29.w, 
-            child: _text('기본 정보 보기', 13.sp, const Color(0xFFD9D9D9), 1.53)
-          ),
-          Positioned(
-            top: 120.h,
-            left: 29.w,
-            child: Transform.rotate(
-              angle: -0.000004956 * (math.pi / 180),
-              child: const Divider(color: Color(0xFFD9D9D9), thickness: 1),
+            top: 68.h, // 기존보다 살짝 내려줌
+            left: 0,
+            right: 0,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => MyPageScreen(userId: userId,)),
+                );
+                print("마이페이지 이동");
+              },
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 29.w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _text(userName, 30.sp, Colors.black, 0.66),
+                    SizedBox(height: 8.h), // 여백
+                    _text('기본 정보 보기', 13.sp, const Color(0xFFD9D9D9), 1.53),
+                    SizedBox(height: 22.h), // 여백
+                  ],
+                ),
+              ),
             ),
           ),
+
+          // 구분선 (Divider)
           Positioned(
-            top: 162.h, 
-            left: 29.w, 
-            child: _text('예약 내역', 23.sp, Colors.black, 0.87)
+            top: 127.h, 
+            left: 29.w,
+            right: 29.w, 
+            child: Container(
+              height: 1.h,
+              color: const Color(0xFFD9D9D9),
+            ),
           ),
+
+          // 예약 내역
           Positioned(
-            top: 196.h, 
-            left: 31.w, 
-            child: _text('FAQ', 23.sp, Colors.black, 0.87)
+            top: 172.h, 
+            left: 29.w,
+            child: _text('예약 내역', 23.sp, Colors.black, 0.87),
           ),
+
+          // FAQ
           Positioned(
-            top: 260.h, 
-            left: 29.w, 
+            top: 206.h, // 기존 196.h → 아래로 10
+            left: 31.w,
+            child: _text('FAQ', 23.sp, Colors.black, 0.87),
+          ),
+
+          // 로그아웃
+          Positioned(
+            top: 270.h, // 기존 260.h → 아래로 10
+            left: 29.w,
             child: GestureDetector(
               onTap: () {
                 onLogout();
                 onClose();
               },
-              child: _text('로그아웃', 17.sp, const Color(0xFF030361), 1.17)
+              child: _text('로그아웃', 17.sp, const Color(0xFF030361), 1.17),
             ),
           ),
+
+          // 탈퇴하기
           Positioned(
-            top: 287.h, 
-            left: 29.w, 
-            child: _text('탈퇴하기', 17.sp, const Color(0xFFC10000), 1.17)
+            top: 297.h, // 기존 287.h → 아래로 10
+            left: 29.w,
+            child: _text('탈퇴하기', 17.sp, const Color(0xFFC10000), 1.17),
           ),
         ],
       ),
     );
   }
 
-  // 텍스트 스타일 헬퍼 함수
   Widget _text(String text, double size, Color color, double height) {
     return Text(
       text,

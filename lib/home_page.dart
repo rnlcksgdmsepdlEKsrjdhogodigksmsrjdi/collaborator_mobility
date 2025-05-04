@@ -182,14 +182,14 @@ class _MapWithBottomSheetPageState extends State<MapWithBottomSheetPage>
             child: GestureDetector(
               onTap: _openMenu,
               child: Container(
-                width: 40.w,
-                height: 40.h,
+                width: 50.w,
+                height: 50.h,
                 decoration: const BoxDecoration(color: Colors.transparent),
                 child: Stack(
                   children: [
-                    Positioned(top: 6.h, left: 3.w, child: SvgPicture.asset('assets/images/menu2.svg')),
-                    Positioned(top: 12.h, left: 3.w, child: SvgPicture.asset('assets/images/menu3.svg')),
-                    Positioned(top: 18.h, left: 3.w, child: SvgPicture.asset('assets/images/menu1.svg')),
+                    Positioned(top: 10.h, left: 3.w, child: SvgPicture.asset('assets/images/menu2.svg')),
+                    Positioned(top: 20.h, left: 3.w, child: SvgPicture.asset('assets/images/menu3.svg')),
+                    Positioned(top: 30.h, left: 3.w, child: SvgPicture.asset('assets/images/menu1.svg')),
                   ],
                 ),
               ),

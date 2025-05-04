@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -15,7 +16,8 @@ void main() async {
     clientId: 'IGdjiddEnJx86dWfnGW0',
     clientSecret: 'dX02epXz4L',
   );
-  runApp(const MyApp());
+  runApp(
+    ProviderScope(child: MyApp()),);
 }
 
 class MyApp extends StatelessWidget {
@@ -179,8 +181,3 @@ extension LogoutHandler on BuildContext {
   }
 }
 
-// ========== 사용 예시 (HomePage에서 호출) ==========
-// ElevatedButton(
-//   onPressed: () => context.signOutAndRedirect(),
-//   child: const Text('로그아웃'),
-// ),

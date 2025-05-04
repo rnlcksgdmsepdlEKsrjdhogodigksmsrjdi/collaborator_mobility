@@ -6,7 +6,7 @@ import 'package:firebase_database/firebase_database.dart';
 class UserInfoScreen extends StatefulWidget {
   final String userId;
   
-  const UserInfoScreen({super.key, required this.userId});
+  const UserInfoScreen({super.key, required this.userId}); 
 
   @override
   State<UserInfoScreen> createState() => _UserInfoScreenState();

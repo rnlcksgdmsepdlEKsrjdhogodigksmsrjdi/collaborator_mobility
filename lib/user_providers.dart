@@ -10,3 +10,9 @@ final userAdditionalInfoProvider = FutureProvider.autoDispose
   final repo = ref.read(userRepositoryProvider);
   return await repo.getUserAdditionalInfo(userId);
 });
+
+final userEmailProvider = FutureProvider.autoDispose
+    .family<String?, String>((ref, userId) async {
+  final repo = ref.read(userRepositoryProvider);
+  return await repo.getUserEmail(userId);
+});
