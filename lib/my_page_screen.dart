@@ -21,7 +21,10 @@ class MyPageScreen extends ConsumerWidget {
         data: (userInfo) {
           final name = userInfo?['name'] ?? '이름 없음';
           final phone = userInfo?['phone'] ?? '전화번호 없음';
-          final carNumber = userInfo?['carNumbers']?.join(', ') ?? '차량번호 없음';
+          final carNumbers = (userInfo?['carNumbers'] as List<dynamic>?)
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              ['차량번호 없음'];
 
           return asyncEmailInfo.when(
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -90,7 +93,7 @@ class MyPageScreen extends ConsumerWidget {
                     buildValueText(top: 151.h, text: name),
                     buildValueText(top: 252.h, text: userEmail),
                     buildValueText(top: 352.h, text: phone),
-                    buildValueText(top: 452.h, text: carNumber),
+                    buildCarNumberTexts(top: 452.h, carNumbers: carNumbers),
 
                     // 수정하기 버튼
                     Positioned(
@@ -149,18 +152,63 @@ class MyPageScreen extends ConsumerWidget {
   Widget buildValueText({required double top, required String text}) {
     return Positioned(
       top: top,
-      left: 30.w,
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: const Color(0xFFD9D9D9),
-          fontFamily: 'Paperlogy',
-          fontSize: 23.sp,
-          letterSpacing: -0.5,
-          height: 0.87,
+      left: 20.w,
+      child: Container(
+        width: 350.w,
+        height: 48.h,
+        padding: EdgeInsets.symmetric(horizontal: 10.w),
+        decoration: BoxDecoration(
+          border: Border.all(color: const Color(0xFFD9D9D9), width: 1),
+          borderRadius: BorderRadius.circular(5.r),
+        ),
+        alignment: Alignment.centerLeft,
+        child: Text(
+          text,
+          style: TextStyle(
+            color: const Color(0xFFD9D9D9),
+            fontFamily: 'Paperlogy',
+            fontSize: 20.sp,
+            letterSpacing: -0.5,
+            height: 1.2,
+          ),
         ),
       ),
     );
   }
+
+    Widget buildCarNumberTexts({required double top, required List<String> carNumbers}) {
+    return Positioned(
+      top: top,
+      left: 20.w,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: carNumbers.map((number) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: 8.h),
+            child: Container(
+              width: 350.w,
+              height: 48.h,
+              padding: EdgeInsets.symmetric(horizontal: 10.w),
+              decoration: BoxDecoration(
+                border: Border.all(color: const Color(0xFFD9D9D9), width: 1),
+                borderRadius: BorderRadius.circular(5.r),
+              ),
+              alignment: Alignment.centerLeft,
+              child: Text(
+                number,
+                style: TextStyle(
+                  color: const Color(0xFFD9D9D9),
+                  fontFamily: 'Paperlogy',
+                  fontSize: 20.sp,
+                  letterSpacing: -0.5,
+                  height: 1.2,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
 }
