@@ -91,7 +91,7 @@ class UserService {
   Future<bool> _reauthenticateWithNaver() async {
     try {
       // 네이버 로그인 성공 여부 확인
-      final isLoginSuccess = await Completer<bool>();
+      final isLoginSuccess = Completer<bool>();
       
       await NaverLoginSDK.authenticate(
         callback: OAuthLoginCallback(
@@ -130,6 +130,8 @@ class UserService {
 }
 
 class PasswordInputDialog extends StatefulWidget {
+  const PasswordInputDialog({super.key});
+
   @override
   _PasswordInputDialogState createState() => _PasswordInputDialogState();
 }
