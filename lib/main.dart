@@ -16,8 +16,8 @@ void main() async {
     clientId: 'IGdjiddEnJx86dWfnGW0',
     clientSecret: 'dX02epXz4L',
   );
-  runApp(
-    ProviderScope(child: MyApp()),);
+  await FirebaseAuth.instance.signOut(); 
+  runApp(ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -72,18 +72,24 @@ class _SplashEntryScreenState extends State<SplashEntryScreen> {
 class AppStartupScreen extends StatelessWidget {
   const AppStartupScreen({super.key});
 
-  Future<bool> _checkAdditionalInfoExists(String userId) async {
+  // 모든 사용자에 대해 추가 정보 필요 여부 확인 (SNS/이메일 공통)
+  Future<bool> _requiresAdditionalInfo(String userId) async {
     try {
       final snapshot = await FirebaseDatabase.instance
           .ref('users/$userId/additionalInfo')
           .get();
-      return snapshot.exists &&
+
+      // 필수 필드(name, phone, carNumbers)가 모두 존재하는지 확인
+      final hasAdditionalInfo = snapshot.exists &&
           snapshot.child('name').exists &&
           snapshot.child('phone').exists &&
           snapshot.child('carNumbers').exists;
+
+      // 추가 정보가 없으면 true 반환 (정보 입력 필요)
+      return !hasAdditionalInfo;
     } catch (e) {
       debugPrint('❌ 추가 정보 확인 오류: $e');
-      return false;
+      return true; // 오류 발생 시 안전하게 추가 정보 입력 화면으로
     }
   }
 
@@ -103,17 +109,18 @@ class AppStartupScreen extends StatelessWidget {
           return const LoginPage();
         }
 
-        // 추가 정보 확인
+        // 추가 정보 필요 여부 확인 (SNS/이메일 동일 조건)
         return FutureBuilder<bool>(
-          future: _checkAdditionalInfoExists(user.uid),
+          future: _requiresAdditionalInfo(user.uid),
           builder: (context, infoSnapshot) {
             if (infoSnapshot.connectionState == ConnectionState.waiting) {
               return const LoadingScreen();
             }
 
+            // 추가 정보가 필요하면 정보 입력 화면, 아니면 홈 화면
             return infoSnapshot.data == true
-                ? const MapWithBottomSheetPage()
-                : UserInfoScreen(userId: user.uid);
+                ? UserInfoScreen(userId: user.uid)
+                : const MapWithBottomSheetPage();
           },
         );
       },
@@ -166,7 +173,7 @@ extension LogoutHandler on BuildContext {
     try {
       await FirebaseAuth.instance.signOut();
       await NaverLoginSDK.logout(); // Naver 연동 로그아웃
-      
+
       Navigator.pushAndRemoveUntil(
         this,
         MaterialPageRoute(builder: (_) => const LoginPage()),
@@ -180,4 +187,3 @@ extension LogoutHandler on BuildContext {
     }
   }
 }
-

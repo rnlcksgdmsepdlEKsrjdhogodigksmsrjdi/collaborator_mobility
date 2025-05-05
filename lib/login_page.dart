@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -9,22 +10,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:firebase_database/firebase_database.dart';
 import 'dart:math' as math;
-
 import 'home_page.dart';
-
-// UserData DB 저장
-Future<void> saveUserData(User user) async {
-  final databaseRef = FirebaseDatabase.instance.ref();
-  final userRef = databaseRef.child('users/${user.uid}/basicInfo');
-
-  await userRef.update({
-    'email': user.email ?? '',
-    'displayName': user.displayName ?? '',
-    'uid': user.uid,
-    'provider': user.providerData.isNotEmpty ? user.providerData[0].providerId : '',
-    'lastLogin': DateTime.now().toIso8601String()
-  });
-}
+import 'user_info.dart'; // 추가 정보 입력 화면 임포트 확인!
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -33,38 +20,69 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-// LoginPage의 기본적인 상태 정의 
 class _LoginPageState extends State<LoginPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
   @override
-  void dispose(){
+  void dispose() {
     emailController.dispose();
     passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> _navigateToHome() async {
+  // 모든 로그인 공통: 추가 정보 확인 후 라우팅
+  Future<void> _handleLoginSuccess(User user) async {
+    final requiresInfo = await _requiresAdditionalInfo(user.uid);
+    
     if (!mounted) return;
+    
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const MapWithBottomSheetPage()),
+      MaterialPageRoute(
+        builder: (context) => requiresInfo
+            ? UserInfoScreen(userId: user.uid)
+            : const MapWithBottomSheetPage(),
+      ),
     );
   }
 
+  // 추가 정보 필요 여부 확인
+  Future<bool> _requiresAdditionalInfo(String uid) async {
+    try {
+      final snapshot = await FirebaseDatabase.instance
+          .ref('users/$uid/additionalInfo')
+          .get();
+
+      return !(snapshot.exists &&
+          snapshot.child('name').exists &&
+          snapshot.child('phone').exists &&
+          snapshot.child('carNumbers').exists);
+    } catch (e) {
+      debugPrint('추가 정보 확인 오류: $e');
+      return true; // 오류 시 추가 정보 입력 화면으로
+    }
+  }
+
+  // 사용자 데이터 저장
+  Future<void> saveUserData(User user, {String provider = ''}) async {
+    final userRef = FirebaseDatabase.instance.ref('users/${user.uid}/basicInfo');
+    await userRef.update({
+      'email': user.email ?? '',
+      'displayName': user.displayName ?? '',
+      'provider': provider.isNotEmpty ? provider : user.providerData.first.providerId,
+      'lastLogin': DateTime.now().toIso8601String()
+    });
+  }
+
+  // 에러 표시
   void _showError(String message) {
     if (!mounted) return;
-    
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 3),
-      ),
+      SnackBar(content: Text(message), duration: const Duration(seconds: 3)),
     );
-    print('에러 발생: $message');
   }
-  
+
   // 이메일 로그인
   Future<void> signInWithEmail() async {
     try {
@@ -76,17 +94,12 @@ class _LoginPageState extends State<LoginPage> {
       if (!credential.user!.emailVerified) {
         await FirebaseAuth.instance.signOut();
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("이메일 인증을 완료해주세요.")),
-        );
+        _showError("이메일 인증을 완료해주세요.");
         return;
       }
+
       await saveUserData(credential.user!);
-      await _navigateToHome();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("로그인 성공!")),
-      );
+      await _handleLoginSuccess(credential.user!);
     } catch (e) {
       _showError("로그인 실패: ${e.toString()}");
     }
@@ -95,19 +108,18 @@ class _LoginPageState extends State<LoginPage> {
   // 구글 로그인
   Future<void> signInWithGoogle() async {
     try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      final googleUser = await GoogleSignIn().signIn();
       if (googleUser == null) return;
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final googleAuth = await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      final UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-      await saveUserData(userCredential.user!); 
-      await _navigateToHome();
-      if (!mounted) return;
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      await saveUserData(userCredential.user!, provider: 'google.com');
+      await _handleLoginSuccess(userCredential.user!);
     } catch (e) {
       _showError("구글 로그인 실패: ${e.toString()}");
     }
@@ -119,88 +131,61 @@ class _LoginPageState extends State<LoginPage> {
       await NaverLoginSDK.authenticate(
         callback: OAuthLoginCallback(
           onSuccess: () async {
-            await NaverLoginSDK.profile(
-              callback: ProfileCallback(
-                onSuccess: (resultCode, message, response) async {
-                  final profile = NaverLoginProfile.fromJson(response: response);
-                  final naverId = profile.id ?? 'default_naver_id';
-                  final email = profile.email ?? '$naverId@naver.com';
-
-                  final accessToken = await NaverLoginSDK.getAccessToken();
-                  final customToken = await _getFirebaseCustomToken(
-                    accessToken: accessToken, 
-                    naverId: naverId,
-                    email: email,
-                  );
-                  await FirebaseAuth.instance.signInWithCustomToken(customToken);
-                  final user = FirebaseAuth.instance.currentUser;
-                  if (user != null) {
-                    await saveUserData(user);
-                    await _navigateToHome();
-                  }
-                  if (!mounted) return;
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("네이버 로그인 성공!")),
-                  );
-                },
-                onFailure: (httpStatus, message) {
-                  throw Exception("프로필 조회 실패 | 상태코드: $httpStatus | 메시지: $message");
-                },
-                onError: (errorCode, message) {
-                  throw Exception("프로필 조회 오류 | 코드: $errorCode | 메시지: $message");
-                },
-              ),
+            final accessToken = await NaverLoginSDK.getAccessToken();
+            final profile = await _getNaverProfile();
+            final customToken = await _getFirebaseCustomToken(
+              accessToken: accessToken,
+              naverId: profile.id!,
+              email: profile.email ?? '${profile.id}@naver.com',
             );
+
+            final userCredential = await FirebaseAuth.instance.signInWithCustomToken(customToken);
+            await saveUserData(userCredential.user!, provider: 'naver');
+            await _handleLoginSuccess(userCredential.user!);
           },
-          onFailure: (httpStatus, message) {
-            _showError("네이버 로그인 실패 | 상태코드: $httpStatus | 메시지: $message");
-          },
-          onError: (errorCode, message) {
-            _showError("네이버 로그인 오류 | 코드: $errorCode | 메시지: $message");
-          },
+          onFailure: (_, msg) => _showError("네이버 로그인 실패: $msg"),
+          onError: (_, msg) => _showError("네이버 로그인 오류: $msg"),
         ),
       );
     } catch (e) {
-      _showError("네이버 로그인 중 예외 발생: ${e.toString()}");
+      _showError("네이버 로그인 중 예외: ${e.toString()}");
     }
   }
 
+  // 네이버 프로필 조회
+  Future<NaverLoginProfile> _getNaverProfile() async {
+    final completer = Completer<NaverLoginProfile>();
+    NaverLoginSDK.profile(
+      callback: ProfileCallback(
+        onSuccess: (_, __, res) => completer.complete(NaverLoginProfile.fromJson(response: res)),
+        onFailure: (_, msg) => completer.completeError(Exception(msg)),
+        onError: (_, msg) => completer.completeError(Exception(msg)),
+      ),
+    );
+    return completer.future;
+  }
+
+  // Firebase 커스텀 토큰 요청
   Future<String> _getFirebaseCustomToken({
     required String accessToken,
     required String naverId,
     required String email,
   }) async {
-    const functionUrl = "https://naverlogin-ov5rbv4c3q-du.a.run.app";
+    const url = "https://naverlogin-ov5rbv4c3q-du.a.run.app";
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'accessToken': accessToken, 'naverId': naverId, 'email': email}),
+    );
 
-    try {
-      final response = await http.post(
-        Uri.parse(functionUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'accessToken': accessToken,
-          'naverId': naverId,
-          'email': email,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        final token = responseData['token'] ?? responseData['customToken'];
-        if (token != null && token is String) {
-          return token;
-        } else {
-          throw Exception('유효하지 않은 토큰 형식: ${response.body}');
-        }
-      } else {
-        throw Exception('HTTP ${response.statusCode}: ${response.body}');
-      }
-    } catch (e) {
-      print('🔥 커스텀 토큰 요청 실패: $e');
-      throw Exception('토큰 발급 실패: $e'); 
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body)['token'] as String;
+    } else {
+      throw Exception('토큰 발급 실패: ${response.body}');
     }
   }
-  // 디자인 파트
+
+   // 디자인 파트
   @override
   Widget build(BuildContext context) {
     return Scaffold(

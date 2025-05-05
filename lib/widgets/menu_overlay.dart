@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../my_page_screen.dart';
+import '../widgets/delete_user_popup.dart';
 
 class MenuOverlay extends StatelessWidget {
   final VoidCallback onClose;
@@ -122,6 +122,16 @@ class MenuOverlay extends StatelessWidget {
   );
 }
 
+  void _showDeleteDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return DeleteDialog(context: context);  // DeleteDialog 호출
+      },
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -212,7 +222,12 @@ class MenuOverlay extends StatelessWidget {
           Positioned(
             top: 312.h, // 기존 287.h → 아래로 10
             left: 29.w,
-            child: _text('탈퇴하기', 17.sp, const Color(0xFFC10000), 1.17),
+            child: GestureDetector(
+              onTap: () {
+                  _showDeleteDialog(context);
+              },
+              child: _text('탈퇴하기', 17.sp, const Color(0xFFC10000), 1.17),
+            ),
           ),
         ],
       ),
