@@ -262,36 +262,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                 ),
               ),
-              Positioned(
-              top: 216.h,
-              left: 20.w,
-              child: GestureDetector(
-                onTap: _signUp,
-                child: Container(
-                  width: 350.w,
-                  height: 48.h,
-                  decoration: BoxDecoration(
-                    color: const Color.fromRGBO(3, 3, 97, 1),
-                    borderRadius: BorderRadius.circular(5)
-                  ),
-                  child: Center(
-                    child: Text(
-                      '회원가입',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: const Color.fromRGBO(255, 255, 255, 1),
-                        fontFamily: 'Paperlogy',
-                        fontSize: 15.sp,
-                        letterSpacing: -0.5,
-                        fontWeight: FontWeight.normal,
-                        height: 1,
-                      ),
-                    )
-                  ),
-                ),
-              ),
-            ),
-
+              
               // 뒤로 가기 아이콘
               Positioned(
                 top: 45.h,

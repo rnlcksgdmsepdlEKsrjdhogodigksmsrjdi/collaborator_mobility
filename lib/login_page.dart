@@ -126,64 +126,91 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   // 네이버 로그인
-  Future<void> signInWithNaver() async {
-    try {
-      await NaverLoginSDK.authenticate(
-        callback: OAuthLoginCallback(
-          onSuccess: () async {
-            final accessToken = await NaverLoginSDK.getAccessToken();
-            final profile = await _getNaverProfile();
-            final customToken = await _getFirebaseCustomToken(
-              accessToken: accessToken,
-              naverId: profile.id!,
-              email: profile.email ?? '${profile.id}@naver.com',
-            );
+Future<void> signInWithNaver() async {
+  try {
+    await NaverLoginSDK.authenticate(
+      callback: OAuthLoginCallback(
+        onSuccess: () async {
+          await NaverLoginSDK.profile(
+            callback: ProfileCallback(
+              onSuccess: (resultCode, message, response) async {
+                final profile = NaverLoginProfile.fromJson(response: response);
+                final naverId = profile.id ?? 'default_naver_id';
+                final email = profile.email ?? '$naverId@naver.com';
 
-            final userCredential = await FirebaseAuth.instance.signInWithCustomToken(customToken);
-            await saveUserData(userCredential.user!, provider: 'naver');
-            await _handleLoginSuccess(userCredential.user!);
-          },
-          onFailure: (_, msg) => _showError("네이버 로그인 실패: $msg"),
-          onError: (_, msg) => _showError("네이버 로그인 오류: $msg"),
-        ),
-      );
-    } catch (e) {
-      _showError("네이버 로그인 중 예외: ${e.toString()}");
-    }
-  }
-
-  // 네이버 프로필 조회
-  Future<NaverLoginProfile> _getNaverProfile() async {
-    final completer = Completer<NaverLoginProfile>();
-    NaverLoginSDK.profile(
-      callback: ProfileCallback(
-        onSuccess: (_, __, res) => completer.complete(NaverLoginProfile.fromJson(response: res)),
-        onFailure: (_, msg) => completer.completeError(Exception(msg)),
-        onError: (_, msg) => completer.completeError(Exception(msg)),
+                final accessToken = await NaverLoginSDK.getAccessToken();
+                final customToken = await _getFirebaseCustomToken(
+                  accessToken: accessToken, 
+                  naverId: naverId,
+                  email: email,
+                );
+                
+                // Firebase 로그인
+                final userCredential = await FirebaseAuth.instance.signInWithCustomToken(customToken);
+                final user = userCredential.user;
+                
+                if (user != null) {
+                  await saveUserData(user, provider: 'naver');
+                  await _handleLoginSuccess(user);
+                }
+              },
+              onFailure: (httpStatus, message) {
+                _showError("프로필 조회 실패 | 상태코드: $httpStatus | 메시지: $message");
+              },
+              onError: (errorCode, message) {
+                _showError("프로필 조회 오류 | 코드: $errorCode | 메시지: $message");
+              },
+            ),
+          );
+        },
+        onFailure: (httpStatus, message) {
+          _showError("네이버 로그인 실패 | 상태코드: $httpStatus | 메시지: $message");
+        },
+        onError: (errorCode, message) {
+          _showError("네이버 로그인 오류 | 코드: $errorCode | 메시지: $message");
+        },
       ),
     );
-    return completer.future;
+  } catch (e) {
+    _showError("네이버 로그인 중 예외 발생: ${e.toString()}");
   }
+}
 
   // Firebase 커스텀 토큰 요청
   Future<String> _getFirebaseCustomToken({
-    required String accessToken,
-    required String naverId,
-    required String email,
-  }) async {
-    const url = "https://naverlogin-ov5rbv4c3q-du.a.run.app";
+  required String accessToken,
+  required String naverId,
+  required String email,
+}) async {
+  const url = "https://naverlogin-ov5rbv4c3q-du.a.run.app";
+  try {
     final response = await http.post(
       Uri.parse(url),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'accessToken': accessToken, 'naverId': naverId, 'email': email}),
+      body: jsonEncode({
+        'accessToken': accessToken,
+        'naverId': naverId,
+        'email': email,
+      }),
     );
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body)['token'] as String;
+      final responseData = jsonDecode(response.body);
+      final token = responseData['token'] ?? responseData['customToken'];
+      
+      if (token == null) {
+        throw Exception('토큰 값이 서버 응답에 존재하지 않습니다: ${response.body}');
+      }
+      
+      return token.toString(); // 명시적으로 String으로 변환
     } else {
-      throw Exception('토큰 발급 실패: ${response.body}');
+      throw Exception('HTTP ${response.statusCode}: ${response.body}');
     }
+  } catch (e) {
+    debugPrint('🔥 커스텀 토큰 요청 실패: $e');
+    throw Exception('토큰 발급 실패: $e');
   }
+}
 
    // 디자인 파트
   @override
