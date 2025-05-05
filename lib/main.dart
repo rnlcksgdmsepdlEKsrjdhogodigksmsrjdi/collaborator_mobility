@@ -16,7 +16,7 @@ void main() async {
     clientId: 'IGdjiddEnJx86dWfnGW0',
     clientSecret: 'dX02epXz4L',
   );
-  await FirebaseAuth.instance.signOut(); 
+  
   runApp(ProviderScope(child: MyApp()));
 }
 
