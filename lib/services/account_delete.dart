@@ -1,21 +1,21 @@
+// 게정 탈퇴 관련 코드입니다.
+
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:naver_login_sdk/naver_login_sdk.dart';
-import 'package:http/http.dart' as http;
 
 class UserService {
   Future<void> deleteUserAccount(BuildContext context) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // 데이터베이스에서 provider 정보 가져오기
+    // DB에서 provider, email 가져오기 
     final provider = await _getUserProvider(user.uid);
     final userEmail = user.email ?? '';
-    String userPassword = '';
+    String userPassword = ''; // passwd는 확인용으로 존재 
 
     try {
       if (provider == 'password') {
@@ -28,7 +28,7 @@ class UserService {
         if (userPassword.isEmpty) return;
       }
       
-      await _handleDelete(context, user, userEmail, userPassword, provider);
+      await _handleDelete(context, user, userEmail, userPassword, provider); // 탈퇴
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -38,6 +38,9 @@ class UserService {
     }
   }
 
+  // uid provider 제공 
+  // 원래는 auth에서 provider를 기본으로 제공해주는데 네이버 로그인 같은 경우는 auth 주관이 아니라서 db에 저장함
+  // 이를 불러옴
   Future<String?> _getUserProvider(String uid) async {
     final snapshot = await FirebaseDatabase.instance
         .ref()
@@ -46,6 +49,7 @@ class UserService {
     return snapshot.value?.toString();
   }
 
+  // 탈퇴 함수
   Future<void> _handleDelete(BuildContext context, User user, String email, String password, String? provider) async {
     final success = await _reauthenticate(user, email, password, provider);
     if (!success) throw Exception("재인증 실패");
@@ -60,7 +64,9 @@ class UserService {
     }
   }
 
+  // 재인증 함수
   Future<bool> _reauthenticate(User user, String email, String password, String? provider) async {
+    // 이메일 유저만 passwd 입력 후 진행하게 함 
     try {
       if (provider == 'password') {
         await user.reauthenticateWithCredential(
@@ -68,7 +74,7 @@ class UserService {
         );
         return true;
       } else if (provider == 'google.com') {
-        final googleUser = await GoogleSignIn().signIn();
+        final googleUser = await GoogleSignIn().signIn(); // 다시 로그인하는 과정을 통해서 재인증 
         if (googleUser == null) return false;
 
         final googleAuth = await googleUser.authentication;
@@ -79,7 +85,7 @@ class UserService {
         await user.reauthenticateWithCredential(credential);
         return true;
       } else if (provider == 'naver') {
-        return await _reauthenticateWithNaver();
+        return await _reauthenticateWithNaver(); // 네이버는 따로 처리하는 함수 진행 
       }
       return false;
     } catch (e) {
@@ -87,7 +93,7 @@ class UserService {
       return false;
     }
   }
-
+  // 네이버 재인증 - 다시 로그인 해서 되는지 확인
   Future<bool> _reauthenticateWithNaver() async {
     try {
       // 네이버 로그인 성공 여부 확인
@@ -115,7 +121,7 @@ class UserService {
   }
 
   Future<void> _deleteUserDataAndLogout(User user) async {
-    // 사용자 데이터 삭제
+    // DB에 저장된 유저 내용 삭제 
     final userRef = FirebaseDatabase.instance.ref().child('users/${user.uid}');
     await userRef.remove();
     
@@ -129,6 +135,7 @@ class UserService {
   }
 }
 
+// 비밀번호 입력
 class PasswordInputDialog extends StatefulWidget {
   const PasswordInputDialog({super.key});
 

@@ -202,7 +202,7 @@ Future<void> signInWithNaver() async {
         throw Exception('토큰 값이 서버 응답에 존재하지 않습니다: ${response.body}');
       }
       
-      return token.toString(); // 명시적으로 String으로 변환
+      return token.toString(); // 명시적으로 String으로 변환 - 로그인 토큰 진행 시 타입 문제 발생해 작성
     } else {
       throw Exception('HTTP ${response.statusCode}: ${response.body}');
     }
