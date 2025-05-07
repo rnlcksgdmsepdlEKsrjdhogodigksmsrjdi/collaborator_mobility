@@ -30,7 +30,7 @@ main branch는 건들이지 말아주세요. <br>
 ### 로그인
 - 로그인 / 로그아웃 / 인증 파트 구현 
 - 자동 로그인 확인
-- Firebase Realtime Database에 uid 관련 정보 저장 완료
+- Firebase Realtime Database에 uid 관련 정보 저장 완료.
 - 앱 디자인 적용 완료
 
 ### 회원가입 화면
