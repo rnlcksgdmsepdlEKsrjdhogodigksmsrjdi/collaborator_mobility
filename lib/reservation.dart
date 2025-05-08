@@ -1,9 +1,12 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:mobility/user_repository.dart';
 import 'package:mobility/widgets/reservation_confirm_popup.dart';
 
 class ReservationScreen extends StatefulWidget {
   final String destination;
+
   const ReservationScreen({super.key, required this.destination});
 
   @override
@@ -13,8 +16,10 @@ class ReservationScreen extends StatefulWidget {
 class _ReservationScreenState extends State<ReservationScreen> {
   DateTime? selectedDate;
   String? selectedTime;
-  String? destination;
+  List<String> carNumbers = [];
+  String? selectedCarNumber; // 차량 번호 상태 추가
 
+  late String destination;
   late int currentYear;
   late int currentMonth;
 
@@ -37,11 +42,11 @@ class _ReservationScreenState extends State<ReservationScreen> {
     final today = DateTime.now();
     currentYear = today.year;
     currentMonth = today.month;
-    selectedDate = today; // 오늘 날짜로 자동 선택
+    selectedDate = today;
 
     calendar = _generateCalendar(currentYear, currentMonth);
-
     print('선택된 목적지: $destination');
+    _loadUserCarNumber();
   }
 
   List<List<Map<String, dynamic>>> _generateCalendar(int year, int month) {
@@ -89,28 +94,35 @@ class _ReservationScreenState extends State<ReservationScreen> {
     });
   }
 
-  bool _isPastTime(DateTime date, String time, {required bool isAm}) {
-  final now = DateTime.now();
+  Future<void> _loadUserCarNumber() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
 
-  // 시간 문자열을 시:분 형태로 나눔
-  final parts = time.split(':');
-  int hour = int.parse(parts[0]);
-  int minute = int.parse(parts[1]);
+    final userInfo = await UserRepository().getUserAdditionalInfo(userId);
 
-  if (isAm) {
-    if (hour == 12) hour = 0; // 오전 12시는 0시
-  } else {
-    if (hour != 12) hour += 12; // 오후 시간 변환
+    if (userInfo != null && userInfo['carNumbers'] is List) {
+      final cars = List<String>.from(userInfo['carNumbers']);
+      if (cars.isNotEmpty) {
+        setState(() {
+          carNumbers = cars;
+          selectedCarNumber = cars.first;
+        });
+      }
+    }
   }
-
-  final fullDateTime = DateTime(date.year, date.month, date.day, hour, minute);
-
-  return fullDateTime.isBefore(now);
-}
-
 
   String _formatDateKey(DateTime date) {
     return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+  }
+
+  bool _isPastTime(String time, DateTime selectedDate) {
+    final List<String> timeParts = time.split(':');
+    final int hour = int.parse(timeParts[0]);
+    final int minute = int.parse(timeParts[1]);
+    final DateTime timeOfDay = DateTime(selectedDate.year, selectedDate.month, selectedDate.day, hour, minute);
+    final DateTime today = DateTime.now();
+
+    return timeOfDay.isBefore(today);
   }
 
   @override
@@ -172,7 +184,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
                         children: amTimes.map((time) {
                           final isDisabled = selectedDate == null
                               ? false
-                              : (reservedTimes[_formatDateKey(selectedDate!)]?.contains(time) ?? false) ||_isPastTime(selectedDate!, time, isAm: true);
+                              : _isPastTime(time, selectedDate!) || (reservedTimes[_formatDateKey(selectedDate!)]?.contains(time) ?? false);
                           return TimeButton(
                             time: time,
                             isSelected: selectedTime == '오전 $time',
@@ -180,10 +192,9 @@ class _ReservationScreenState extends State<ReservationScreen> {
                             onPressed: () {
                               setState(() {
                                 if (selectedTime == '오전 $time') {
-                                  selectedTime = null; // 선택 버튼 누르면 해제
-                                }
-                                else {
-                                  selectedTime = '오전 $time'; //버튼 선택 O
+                                  selectedTime = null;
+                                } else {
+                                  selectedTime = '오전 $time';
                                 }
                               });
                             },
@@ -199,17 +210,16 @@ class _ReservationScreenState extends State<ReservationScreen> {
                         children: pmTimes.map((time) {
                           final isDisabled = selectedDate == null
                               ? false
-                              : (reservedTimes[_formatDateKey(selectedDate!)]?.contains(time) ?? false) ||_isPastTime(selectedDate!, time, isAm: false);
+                              : _isPastTime(time, selectedDate!) || (reservedTimes[_formatDateKey(selectedDate!)]?.contains(time) ?? false);
                           return TimeButton(
                             time: time,
                             isSelected: selectedTime == '오후 $time',
                             isDisabled: isDisabled,
                             onPressed: () {
                               setState(() {
-                                if(selectedTime == '오후 $time') {
+                                if (selectedTime == '오후 $time') {
                                   selectedTime = null;
-                                }
-                                else {
+                                } else {
                                   selectedTime = '오후 $time';
                                 }
                               });
@@ -217,6 +227,24 @@ class _ReservationScreenState extends State<ReservationScreen> {
                           );
                         }).toList(),
                       ),
+                      const SizedBox(height: 20),
+                      // 차량 번호 선택
+                      if (carNumbers.isNotEmpty)
+                        DropdownButton<String>(
+                          value: selectedCarNumber,
+                          onChanged: (String? newValue) {
+                            setState(() {
+                              selectedCarNumber = newValue;
+                            });
+                          },
+                          items: carNumbers.map<DropdownMenuItem<String>>((String carNumber) {
+                            return DropdownMenuItem<String>(
+                              value: carNumber,
+                              child: Text(carNumber),
+                            );
+                          }).toList(),
+                          hint: Text('차량 번호 선택'),
+                        ),
                     ],
                   ),
                 ),
@@ -233,20 +261,21 @@ class _ReservationScreenState extends State<ReservationScreen> {
                       ),
                     ),
                     onPressed: () {
-                      if (selectedDate != null && selectedTime != null) {
-                        
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ReservationConfirmScreen(
+                      if (selectedDate != null && selectedTime != null && selectedCarNumber != null) {
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return ReservationConfirmPopup(
                               date: selectedDate!,
                               time: selectedTime!,
-                            ),
-                          ),
+                              destination: destination,
+                              carNumber: selectedCarNumber!,
+                            );
+                          },
                         );
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('날짜와 시간을 선택해주세요.')),
+                          const SnackBar(content: Text('날짜, 시간, 차량 번호를 선택해주세요.')),
                         );
                       }
                     },
@@ -261,7 +290,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
     );
   }
 
-    Widget _buildCalendar() {
+  Widget _buildCalendar() {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
@@ -340,12 +369,8 @@ class _ReservationScreenState extends State<ReservationScreen> {
                         child: Text(
                           day['date'],
                           style: TextStyle(
+                            color: isSelected ? Colors.white : Colors.black,
                             fontSize: 16.sp,
-                            color: day['disabled']
-                                ? Colors.grey
-                                : isSelected
-                                    ? Colors.white
-                                    : Colors.black,
                           ),
                         ),
                       ),
@@ -369,10 +394,13 @@ class _WeekDayText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Center(
-        child: Text(
-          text,
-          style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 16.sp,
+          fontWeight: FontWeight.bold,
+          color: Colors.black,
         ),
       ),
     );
