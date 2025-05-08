@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:mobility/reservation.dart';
 import '../widgets/custom_popup.dart';
 
 class Frame28Widget extends StatelessWidget {
@@ -105,7 +106,16 @@ class Frame28Widget extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20.r),
               ),
               alignment: Alignment.center,
-              child: Text(
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ReservationScreen(destination: label),
+                    ),
+                  );
+                },
+                child: Text(
                 '예약하기',
                 style: TextStyle(
                   color: Colors.white,
@@ -115,6 +125,7 @@ class Frame28Widget extends StatelessWidget {
                   height: 1.33,
                 ),
               ),
+              )
             ),
           ],
         ),
