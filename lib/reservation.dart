@@ -15,8 +15,8 @@ class _ReservationScreenState extends State<ReservationScreen> {
   String? selectedTime;
   String? destination;
 
-  int currentYear = 2025;
-  int currentMonth = 5;
+  late int currentYear;
+  late int currentMonth;
 
   final List<String> amTimes = ['12:00', '3:30', '7:00', '10:30'];
   final List<String> pmTimes = ['12:00', '3:30', '7:00', '10:30'];
@@ -33,7 +33,15 @@ class _ReservationScreenState extends State<ReservationScreen> {
   void initState() {
     super.initState();
     destination = widget.destination;
+
+    final today = DateTime.now();
+    currentYear = today.year;
+    currentMonth = today.month;
+    selectedDate = today; // 오늘 날짜로 자동 선택
+
     calendar = _generateCalendar(currentYear, currentMonth);
+
+    print('선택된 목적지: $destination');
   }
 
   List<List<Map<String, dynamic>>> _generateCalendar(int year, int month) {
