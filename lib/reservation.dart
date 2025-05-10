@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mobility/user_repository.dart';
@@ -26,11 +27,34 @@ class _ReservationScreenState extends State<ReservationScreen> {
   final List<String> amTimes = ['12:00', '3:30', '7:00', '10:30'];
   final List<String> pmTimes = ['12:00', '3:30', '7:00', '10:30'];
 
-  final Map<String, List<String>> reservedTimes = {
-    '2025-05-18': ['10:30', '11:00', '12:00', '3:30', '7:00'],
-    '2025-05-19': ['8:00', '10:30'],
-    '2025-05-20': ['4:30', '7:00'],
-  };
+  Map<String, List<String>> reservedTimes = {};
+    Future<void> _loadReservedTimes() async {
+    if (destination == null) return;
+
+    final snapshot = await FirebaseDatabase.instance
+        .ref('reservations/$destination')
+        .get();
+
+    if (snapshot.exists) {
+      final data = snapshot.value as Map<dynamic, dynamic>;
+
+      Map<String, List<String>> result = {};
+
+      data.forEach((key, value) {
+        final parts = key.split(' ');
+        if (parts.length >= 3) {
+          final dateKey = parts[0]; // "2025-05-10"
+          final timeValue = "${parts[1]} ${parts[2]}"; // "오후 7:00"
+          result.putIfAbsent(dateKey, () => []).add(timeValue);
+        }
+      });
+
+      setState(() {
+        reservedTimes = result;
+      });
+    }
+  }
+
 
   List<List<Map<String, dynamic>>> calendar = [];
 
@@ -47,6 +71,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
     calendar = _generateCalendar(currentYear, currentMonth);
     print('선택된 목적지: $destination');
     _loadUserCarNumber();
+    _loadReservedTimes();
   }
 
   List<List<Map<String, dynamic>>> _generateCalendar(int year, int month) {
@@ -115,15 +140,18 @@ class _ReservationScreenState extends State<ReservationScreen> {
     return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
   }
 
-  bool _isPastTime(String time, DateTime selectedDate) {
-    final List<String> timeParts = time.split(':');
-    final int hour = int.parse(timeParts[0]);
-    final int minute = int.parse(timeParts[1]);
-    final DateTime timeOfDay = DateTime(selectedDate.year, selectedDate.month, selectedDate.day, hour, minute);
-    final DateTime today = DateTime.now();
+  bool _isPastTime(String time, DateTime selectedDate, {required bool isPM}) {
+    final parts = time.split(':');
+    int hour = int.parse(parts[0]);
+    final int minute = int.parse(parts[1]);
 
-    return timeOfDay.isBefore(today);
+    if (isPM && hour != 12) hour += 12;
+    if (!isPM && hour == 12) hour = 0;
+
+    final target = DateTime(selectedDate.year, selectedDate.month, selectedDate.day, hour, minute);
+    return target.isBefore(DateTime.now());
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -184,7 +212,8 @@ class _ReservationScreenState extends State<ReservationScreen> {
                         children: amTimes.map((time) {
                           final isDisabled = selectedDate == null
                               ? false
-                              : _isPastTime(time, selectedDate!) || (reservedTimes[_formatDateKey(selectedDate!)]?.contains(time) ?? false);
+                              : _isPastTime(time, selectedDate!, isPM: false) ||
+                                (reservedTimes[_formatDateKey(selectedDate!)]?.contains('오전 $time') ?? false);
                           return TimeButton(
                             time: time,
                             isSelected: selectedTime == '오전 $time',
@@ -210,7 +239,8 @@ class _ReservationScreenState extends State<ReservationScreen> {
                         children: pmTimes.map((time) {
                           final isDisabled = selectedDate == null
                               ? false
-                              : _isPastTime(time, selectedDate!) || (reservedTimes[_formatDateKey(selectedDate!)]?.contains(time) ?? false);
+                              : _isPastTime(time, selectedDate!, isPM: true) ||
+                                (reservedTimes[_formatDateKey(selectedDate!)]?.contains('오후 $time') ?? false);
                           return TimeButton(
                             time: time,
                             isSelected: selectedTime == '오후 $time',
