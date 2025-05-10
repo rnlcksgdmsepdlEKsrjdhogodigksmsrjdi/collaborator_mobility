@@ -21,27 +21,40 @@ class ReservationConfirmPopup extends StatelessWidget {
   });
 
   Future<void> saveReservationToFirebase(BuildContext context) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+  final uid = FirebaseAuth.instance.currentUser?.uid;
 
-    if (uid == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('로그인이 필요합니다.')),
-      );
-      return;
-    }
+  if (uid == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('로그인이 필요합니다.')),
+    );
+    return;
+  }
 
-    final formattedDateTime =
-        '${DateFormat('yyyy-MM-dd').format(date)} $time';
+  final formattedDate = DateFormat('yyyy-MM-dd').format(date);
+  final formattedDateTime = '$formattedDate $time';
 
-    final dbRef = FirebaseDatabase.instance.ref();
+  final dbRef = FirebaseDatabase.instance.ref();
 
-    await dbRef
+  // 1. 공통 예약 경로 저장
+  await dbRef
+      .child('reservations')
+      .child(destination)
+      .child(formattedDateTime)
+      .set({
+    'carNumber': carNumber,
+    'uid': uid,
+  });
+
+  // 2. 사용자 개별 예약 정보도 저장
+  await dbRef
+        .child('users')
+        .child(uid)
         .child('reservations')
-        .child(destination)
-        .child(formattedDateTime)
+        .child(formattedDate)
+        .child(time)
         .set({
+      'destination': destination,
       'carNumber': carNumber,
-      'uid': uid,
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -50,6 +63,7 @@ class ReservationConfirmPopup extends StatelessWidget {
 
     Navigator.of(context).pop(); // 팝업 닫기
   }
+
 
   @override
   Widget build(BuildContext context) {

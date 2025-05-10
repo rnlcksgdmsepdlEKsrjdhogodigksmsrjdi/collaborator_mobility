@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:mobility/reservation_info.dart';
 import '../my_page_screen.dart';
 import '../widgets/delete_user_popup.dart';
 
@@ -147,15 +148,15 @@ class MenuOverlay extends StatelessWidget {
             top: 0.h,
             left: 0.w,
             child: Container(
-              width: 333.w, // SVG의 width
-              height: 844.h, // SVG의 height
-              color: Colors.white, // fill="white"
+              width: 333.w, 
+              height: 844.h, 
+              color: Colors.white,
             ),
           ),
 
 
           Positioned(
-            top: 68.h, // 기존보다 살짝 내려줌
+            top: 68.h, 
             left: 0,
             right: 0,
             child: GestureDetector(
@@ -196,7 +197,15 @@ class MenuOverlay extends StatelessWidget {
           Positioned(
             top: 182.h, 
             left: 29.w,
-            child: _text('예약 내역', 23.sp, Colors.black, 0.87),
+            child: GestureDetector(
+              onTap:() {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ReservationInfo())
+                );
+              },
+              child: _text('예약 내역', 23.sp, Colors.black, 0.87),
+            )
           ),
 
           // FAQ

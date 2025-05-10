@@ -29,8 +29,6 @@ class _ReservationScreenState extends State<ReservationScreen> {
 
   Map<String, List<String>> reservedTimes = {};
     Future<void> _loadReservedTimes() async {
-    if (destination == null) return;
-
     final snapshot = await FirebaseDatabase.instance
         .ref('reservations/$destination')
         .get();
