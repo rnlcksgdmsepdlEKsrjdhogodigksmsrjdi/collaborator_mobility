@@ -24,8 +24,8 @@ class _ReservationScreenState extends State<ReservationScreen> {
   late int currentYear;
   late int currentMonth;
 
-  final List<String> amTimes = ['12:00', '3:30', '7:00', '10:30'];
-  final List<String> pmTimes = ['12:00', '3:30', '7:00', '10:30'];
+  final List<String> amTimes = ['7:00', '10:30'];
+  final List<String> pmTimes = ['1:00', '4:30', '8:00', '11:30'];
 
   Map<String, List<String>> reservedTimes = {};
     Future<void> _loadReservedTimes() async {

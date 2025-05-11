@@ -5,6 +5,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 class ReservationInfo extends StatefulWidget {
+  const ReservationInfo({super.key});
+
   @override
   _ReservationInfoWidgetState createState() => _ReservationInfoWidgetState();
 }
@@ -63,7 +65,7 @@ class _ReservationInfoWidgetState extends State<ReservationInfo> {
     final formattedDateTime = '$date $time';
 
     // 고유 ID 생성 (삭제 확인용)
-    final reservationId = '${date}_${time}_${destination}';
+    final reservationId = '${date}_${time}_$destination';
 
     try {
       // 1. 공통 예약에서 삭제 (UID로 본인 것만 확인 후 삭제)
@@ -219,7 +221,7 @@ class _ReservationInfoWidgetState extends State<ReservationInfo> {
             Positioned(
               top: 45.h,
               left: 20.w,
-              child: Container(
+              child: SizedBox(
                 width: 28.w,
                 height: 28.h,
                 child: SvgPicture.asset(
