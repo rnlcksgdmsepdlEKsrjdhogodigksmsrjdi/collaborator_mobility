@@ -22,7 +22,6 @@ class ReservationConfirmPopup extends StatelessWidget {
 
   Future<void> saveReservationToFirebase(BuildContext context) async {
   final uid = FirebaseAuth.instance.currentUser?.uid;
-
   if (uid == null) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('로그인이 필요합니다.')),
@@ -31,38 +30,50 @@ class ReservationConfirmPopup extends StatelessWidget {
   }
 
   final formattedDate = DateFormat('yyyy-MM-dd').format(date);
-  final formattedDateTime = '$formattedDate $time';
+
+  // 오전/오후 처리 포함된 시간 → 24시간제로 변환
+  String convertTo24Hour(String time) {
+    bool isPM = time.contains("오후");
+    String rawTime = time.replaceAll("오전", "").replaceAll("오후", "").trim();
+
+    final parsed = DateFormat('h:mm').parse(rawTime);
+    int hour = parsed.hour;
+    int minute = parsed.minute;
+
+    if (isPM && hour != 12) hour += 12;
+    if (!isPM && hour == 12) hour = 0;
+
+    return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+  }
+
+  final time24 = convertTo24Hour(time); // "16:30"
+  final formattedDateTime = '$formattedDate $time24'; // "2025-05-17 16:30"
+
+  final reservationDateTime = DateFormat('yyyy-MM-dd HH:mm').parse(formattedDateTime);
+  final reservationTimestamp = reservationDateTime.millisecondsSinceEpoch;
 
   final dbRef = FirebaseDatabase.instance.ref();
 
-  // 1. 공통 예약 경로 저장
-  await dbRef
-      .child('reservations')
-      .child(destination)
-      .child(formattedDateTime)
-      .set({
+  // 예약 정보 저장
+  await dbRef.child('reservations').child(destination).child(formattedDateTime).set({
     'carNumber': carNumber,
     'uid': uid,
+    'expireAt': reservationTimestamp
   });
 
-  // 2. 사용자 개별 예약 정보도 저장
-  await dbRef
-        .child('users')
-        .child(uid)
-        .child('reservations')
-        .child(formattedDate)
-        .child(time)
-        .set({
-      'destination': destination,
-      'carNumber': carNumber,
-    });
+  await dbRef.child('users').child(uid).child('reservations')
+      .child(formattedDate).child(time).set({
+    'destination': destination,
+    'carNumber': carNumber,
+    'expireAt': reservationTimestamp
+  });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('예약이 완료되었습니다.')),
-    );
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('예약이 완료되었습니다.')),
+  );
+  Navigator.of(context).pop();
+}
 
-    Navigator.of(context).pop(); // 팝업 닫기
-  }
 
 
   @override

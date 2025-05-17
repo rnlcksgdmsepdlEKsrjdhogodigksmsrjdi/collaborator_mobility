@@ -46,6 +46,31 @@ class _ReservationInfoWidgetState extends State<ReservationInfo> {
         });
       });
 
+      // 시간 순 정렬 
+      loaded.sort((a, b) {
+        DateTime parseCustomDateTime(String date, String time) {
+          // time 예시: '오후 8:00' 또는 '오전 9:30'
+          final isPM = time.contains('오후');
+          final cleanTime = time.replaceAll(RegExp(r'[오전오후 ]'), '');
+          final parts = cleanTime.split(':');
+
+          int hour = int.parse(parts[0]);
+          int minute = int.parse(parts[1]);
+
+          // 오전 / 오후 구분 
+          if (isPM && hour < 12) {
+            hour += 12;
+          } else if (!isPM && hour == 12) {
+            hour = 0;
+          }
+
+          return DateTime.parse('$date ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}');
+        }
+
+        final aDateTime = parseCustomDateTime(a['date']!, a['time']!);
+        final bDateTime = parseCustomDateTime(b['date']!, b['time']!);
+        return aDateTime.compareTo(bDateTime);
+      });
 
       setState(() {
         reservations = loaded;
@@ -364,3 +389,5 @@ class _ReservationInfoWidgetState extends State<ReservationInfo> {
     );
   }
 }
+
+

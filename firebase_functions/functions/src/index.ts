@@ -7,12 +7,14 @@ import * as functions from "firebase-functions/v2";
 import * as admin from "firebase-admin";
 import { setGlobalOptions } from "firebase-functions/v2/options";
 import { Request, Response } from "express";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 
 // Firebase functions을 위해 IAM 지역 / functions 지역 동기화
 setGlobalOptions({ region: "asia-northeast3" });
 const serviceAccount = require("../firebase_sdk_setting.json");
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: "https://mobility-1997a-default-rtdb.firebaseio.com"
 });
 
 export const naverLogin = functions.https.onRequest(
@@ -68,3 +70,50 @@ export const naverLogin = functions.https.onRequest(
     }
   }
 );
+
+interface ReservationData {
+  expireAt?: number;
+  uid?: string;
+}
+
+export const autoDeleteExpiredReservations = onSchedule({
+  schedule: "* * * * *",
+  region: "asia-northeast3",
+  timeZone: "Asia/Seoul",
+  retryCount: 3 // 실패 시 재시도 횟수
+}, async (): Promise<void> => {
+  const db = admin.database();
+  const ref = db.ref("reservations");
+  const snapshot = await ref.once("value");
+
+  const now = Date.now();
+  const updates: Record<string, null> = {};
+
+  snapshot.forEach((locationSnap) => {
+    const locationKey = locationSnap.key;
+    const timeSlots: Record<string, ReservationData> = locationSnap.val();
+
+    Object.entries(timeSlots).forEach(([timeKey, data]) => {
+      if (data?.expireAt && data.expireAt < now) {
+        // 예약 경로 삭제
+        updates[`reservations/${locationKey}/${timeKey}`] = null;
+
+        // 사용자 예약 삭제 (UID 존재 시)
+        if (data.uid) {
+          const [datePart, timePart] = timeKey.includes(' ') ? 
+            [timeKey.split(' ')[0], timeKey.split(' ')[1]] : 
+            [timeKey, ""];
+          
+          updates[`users/${data.uid}/reservations/${datePart}/${timePart}`] = null;
+        }
+      }
+    });
+  });
+
+  if (Object.keys(updates).length > 0) {
+    await db.ref().update(updates);
+    functions.logger.log("만료된 예약 삭제 완료", { deletedCount: Object.keys(updates).length });
+  } else {
+    functions.logger.log("삭제할 만료된 예약 없음");
+  }
+});

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
@@ -18,8 +20,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
   DateTime? selectedDate;
   String? selectedTime;
   List<String> carNumbers = [];
-  String? selectedCarNumber; // 차량 번호 상태 추가
-
+  String? selectedCarNumber;
   late String destination;
   late int currentYear;
   late int currentMonth;
@@ -27,28 +28,66 @@ class _ReservationScreenState extends State<ReservationScreen> {
   final List<String> amTimes = ['7:00', '10:30'];
   final List<String> pmTimes = ['1:00', '4:30', '8:00', '11:30'];
 
+  // 변경: Map<String, List<String>>로 타입 명시
   Map<String, List<String>> reservedTimes = {};
-    Future<void> _loadReservedTimes() async {
-    final snapshot = await FirebaseDatabase.instance
-        .ref('reservations/$destination')
-        .get();
+  DatabaseReference? _reservationsRef;
+  StreamSubscription<DatabaseEvent>? _reservationsSubscription;
 
-    if (snapshot.exists) {
-      final data = snapshot.value as Map<dynamic, dynamic>;
+  @override
+  void initState() {
+    super.initState();
+    destination = widget.destination;
+    final today = DateTime.now();
+    currentYear = today.year;
+    currentMonth = today.month;
+    selectedDate = today;
 
-      Map<String, List<String>> result = {};
+    _generateCalendar();
+    _loadUserCarNumber();
+    _setupRealtimeListener();
+  }
 
-      data.forEach((key, value) {
-        final parts = key.split(' ');
-        if (parts.length >= 3) {
-          final dateKey = parts[0]; // "2025-05-10"
-          final timeValue = "${parts[1]} ${parts[2]}"; // "오후 7:00"
-          result.putIfAbsent(dateKey, () => []).add(timeValue);
+  @override
+  void dispose() {
+    _reservationsSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _setupRealtimeListener() {
+    _reservationsRef = FirebaseDatabase.instance.ref('reservations/$destination');
+    _reservationsSubscription = _reservationsRef?.onValue.listen((event) {
+      if (mounted) {
+        _loadReservedTimes();
+      }
+    });
+  }
+
+  Future<void> _loadReservedTimes() async {
+    final snapshot = await _reservationsRef?.get();
+
+    if (snapshot?.exists ?? false) {
+      final data = snapshot!.value as Map<dynamic, dynamic>;
+      final Map<String, List<String>> result = {};
+
+      data.forEach((fullKey, value) {
+        if (fullKey is String) {
+          final parts = fullKey.split(' ');
+          if (parts.length == 2) {
+            final date = parts[0];
+            final time = parts[1];
+            result.putIfAbsent(date, () => []).add(time);
+          }
         }
       });
 
+      if (mounted) {
+        setState(() {
+          reservedTimes = result;
+        });
+      }
+    } else if (mounted) {
       setState(() {
-        reservedTimes = result;
+        reservedTimes = {};
       });
     }
   }
@@ -56,41 +95,34 @@ class _ReservationScreenState extends State<ReservationScreen> {
 
   List<List<Map<String, dynamic>>> calendar = [];
 
-  @override
-  void initState() {
-    super.initState();
-    destination = widget.destination;
-
-    final today = DateTime.now();
-    currentYear = today.year;
-    currentMonth = today.month;
-    selectedDate = today;
-
-    calendar = _generateCalendar(currentYear, currentMonth);
-    print('선택된 목적지: $destination');
-    _loadUserCarNumber();
-    _loadReservedTimes();
-  }
-
-  List<List<Map<String, dynamic>>> _generateCalendar(int year, int month) {
-    List<List<Map<String, dynamic>>> weeks = [];
-    DateTime firstDay = DateTime(year, month, 1);
-    int weekday = firstDay.weekday % 7;
-    int daysInMonth = DateTime(year, month + 1, 0).day;
+  void _generateCalendar() {
+    final weeks = <List<Map<String, dynamic>>>[];
+    final firstDay = DateTime(currentYear, currentMonth, 1);
+    final weekday = firstDay.weekday % 7;
+    final daysInMonth = DateTime(currentYear, currentMonth + 1, 0).day;
 
     List<Map<String, dynamic>> week = [];
+    
+    // 빈 날짜 채우기
     for (int i = 0; i < weekday; i++) {
       week.add({'date': '', 'disabled': true});
     }
 
+    // 실제 날짜 채우기
     for (int day = 1; day <= daysInMonth; day++) {
-      week.add({'date': day.toString(), 'disabled': false});
+      week.add({
+        'date': day.toString(),
+        'disabled': false,
+        'isPast': _isPastDate(DateTime(currentYear, currentMonth, day))
+      });
+      
       if (week.length == 7) {
         weeks.add(week);
         week = [];
       }
     }
 
+    // 남은 빈 날짜 채우기
     if (week.isNotEmpty) {
       while (week.length < 7) {
         week.add({'date': '', 'disabled': true});
@@ -98,7 +130,9 @@ class _ReservationScreenState extends State<ReservationScreen> {
       weeks.add(week);
     }
 
-    return weeks;
+    setState(() {
+      calendar = weeks;
+    });
   }
 
   void _changeMonth(int offset) {
@@ -111,10 +145,11 @@ class _ReservationScreenState extends State<ReservationScreen> {
         currentMonth = 12;
         currentYear -= 1;
       }
-      calendar = _generateCalendar(currentYear, currentMonth);
+      _generateCalendar();
       selectedDate = null;
       selectedTime = null;
     });
+    _loadReservedTimes();
   }
 
   Future<void> _loadUserCarNumber() async {
@@ -122,13 +157,12 @@ class _ReservationScreenState extends State<ReservationScreen> {
     if (userId == null) return;
 
     final userInfo = await UserRepository().getUserAdditionalInfo(userId);
-
     if (userInfo != null && userInfo['carNumbers'] is List) {
       final cars = List<String>.from(userInfo['carNumbers']);
-      if (cars.isNotEmpty) {
+      if (mounted) {
         setState(() {
           carNumbers = cars;
-          selectedCarNumber = cars.first;
+          selectedCarNumber = cars.isNotEmpty ? cars.first : null;
         });
       }
     }
@@ -138,18 +172,40 @@ class _ReservationScreenState extends State<ReservationScreen> {
     return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
   }
 
-  bool _isPastTime(String time, DateTime selectedDate, {required bool isPM}) {
+  bool _isPastDate(DateTime date) {
+    final now = DateTime.now();
+    return date.isBefore(DateTime(now.year, now.month, now.day));
+  }
+
+  bool _isPastTime(String time, DateTime date, {required bool isPM}) {
     final parts = time.split(':');
     int hour = int.parse(parts[0]);
-    final int minute = int.parse(parts[1]);
+    final minute = int.parse(parts[1]);
 
     if (isPM && hour != 12) hour += 12;
     if (!isPM && hour == 12) hour = 0;
 
-    final target = DateTime(selectedDate.year, selectedDate.month, selectedDate.day, hour, minute);
-    return target.isBefore(DateTime.now());
+    final targetTime = DateTime(date.year, date.month, date.day, hour, minute);
+    return targetTime.isBefore(DateTime.now());
   }
 
+  String _convertTo24HourFormat(String period, String time) {
+    final parts = time.split(':');
+    int hour = int.parse(parts[0]);
+    final minute = parts[1];
+
+    if (period == '오후' && hour != 12) hour += 12;
+    if (period == '오전' && hour == 12) hour = 0;
+
+    return '${hour.toString().padLeft(2, '0')}:$minute';
+  }
+
+  bool _isReserved(String dateKey, String period, String time) {
+    if (!reservedTimes.containsKey(dateKey)) return false;
+    
+    final time24 = _convertTo24HourFormat(period, time);
+    return reservedTimes[dateKey]!.contains(time24);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -208,10 +264,10 @@ class _ReservationScreenState extends State<ReservationScreen> {
                         spacing: 12,
                         runSpacing: 12,
                         children: amTimes.map((time) {
+                          final dateKey = selectedDate == null ? '' : _formatDateKey(selectedDate!);
                           final isDisabled = selectedDate == null
                               ? false
-                              : _isPastTime(time, selectedDate!, isPM: false) ||
-                                (reservedTimes[_formatDateKey(selectedDate!)]?.contains('오전 $time') ?? false);
+                              : _isPastTime(time, selectedDate!, isPM: false) || _isReserved(dateKey, '오전', time);
                           return TimeButton(
                             time: time,
                             isSelected: selectedTime == '오전 $time',
@@ -235,10 +291,10 @@ class _ReservationScreenState extends State<ReservationScreen> {
                         spacing: 12,
                         runSpacing: 12,
                         children: pmTimes.map((time) {
+                          final dateKey = selectedDate == null ? '' : _formatDateKey(selectedDate!);
                           final isDisabled = selectedDate == null
                               ? false
-                              : _isPastTime(time, selectedDate!, isPM: true) ||
-                                (reservedTimes[_formatDateKey(selectedDate!)]?.contains('오후 $time') ?? false);
+                              : _isPastTime(time, selectedDate!, isPM: true) || _isReserved(dateKey, '오후', time);
                           return TimeButton(
                             time: time,
                             isSelected: selectedTime == '오후 $time',

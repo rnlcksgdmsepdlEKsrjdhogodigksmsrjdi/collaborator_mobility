@@ -8,6 +8,7 @@ import 'package:naver_login_sdk/naver_login_sdk.dart';
 import 'user_info.dart';
 import 'home_page.dart';
 import 'login_page.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,8 +17,11 @@ void main() async {
     clientId: 'IGdjiddEnJx86dWfnGW0',
     clientSecret: 'dX02epXz4L',
   );
+
+  initializeDateFormatting('ko_KR', null).then((_) {
+    runApp(MyApp());
+  });
   
-  runApp(ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
