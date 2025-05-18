@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,6 +8,9 @@ import 'user_info.dart';
 import 'home_page.dart';
 import 'login_page.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'notification_service.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:io';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,10 +20,21 @@ void main() async {
     clientSecret: 'dX02epXz4L',
   );
 
+  await _requestNotificationPermission();
+  await NotificationService.initialize();
+
   initializeDateFormatting('ko_KR', null).then((_) {
     runApp(MyApp());
   });
   
+}
+
+Future<bool> _requestNotificationPermission() async {
+  if (Platform.isAndroid && await Permission.notification.isDenied) {
+    final status = await Permission.notification.request();
+    return status.isGranted;
+  }
+  return true; // 이미 허용되어 있거나 Android가 아님
 }
 
 class MyApp extends StatelessWidget {

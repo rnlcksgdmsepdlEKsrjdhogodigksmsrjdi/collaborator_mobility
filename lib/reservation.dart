@@ -26,7 +26,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
   late int currentMonth;
 
   final List<String> amTimes = ['7:00', '10:30'];
-  final List<String> pmTimes = ['1:00', '4:30', '8:00', '11:30'];
+  final List<String> pmTimes = ['1:00', '4:30', '8:00', '11:00'];
 
   // 변경: Map<String, List<String>>로 타입 명시
   Map<String, List<String>> reservedTimes = {};
@@ -344,8 +344,26 @@ class _ReservationScreenState extends State<ReservationScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    onPressed: () {
+                    onPressed: () async {
                       if (selectedDate != null && selectedTime != null && selectedCarNumber != null) {
+                        final dateKey = _formatDateKey(selectedDate!);
+                        final period = selectedTime!.split(' ')[0]; // 오전 오후
+                        final time = selectedTime!.split(' ')[1]; // 시간
+                        final time24 = _convertTo24HourFormat(period, time);
+
+                        final fullKey = '$dateKey $time24';
+                        final snapshot = await FirebaseDatabase.instance
+                          .ref('reservations/$destination/$fullKey')
+                          .get();
+
+                        if(snapshot.exists){
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('이미 예약된 시간입니다. 다른 시간을 선택해주세요.')),
+                          );
+                          return;
+                        }
+                        
+
                         showDialog(
                           context: context,
                           builder: (BuildContext context) {

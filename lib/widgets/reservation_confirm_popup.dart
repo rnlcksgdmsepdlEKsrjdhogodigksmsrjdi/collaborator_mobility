@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:mobility/notification_service.dart';
 
 class ReservationConfirmPopup extends StatelessWidget {
   final String destination;
@@ -33,17 +34,14 @@ class ReservationConfirmPopup extends StatelessWidget {
 
   // 오전/오후 처리 포함된 시간 → 24시간제로 변환
   String convertTo24Hour(String time) {
-    bool isPM = time.contains("오후");
-    String rawTime = time.replaceAll("오전", "").replaceAll("오후", "").trim();
+  // 예: '오후 11:30' → 'PM 11:30' 으로 변환
+    time = time.replaceAll('오전', 'AM').replaceAll('오후', 'PM').trim();
 
-    final parsed = DateFormat('h:mm').parse(rawTime);
-    int hour = parsed.hour;
-    int minute = parsed.minute;
+    // 'AM 11:30' 형식으로 파싱
+    final parsed = DateFormat('a h:mm', 'en_US').parse(time);
 
-    if (isPM && hour != 12) hour += 12;
-    if (!isPM && hour == 12) hour = 0;
-
-    return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+    // 24시간제 문자열로 변환
+    return DateFormat('HH:mm').format(parsed); // 결과 예: '23:30'
   }
 
   final time24 = convertTo24Hour(time); // "16:30"
@@ -67,6 +65,13 @@ class ReservationConfirmPopup extends StatelessWidget {
     'carNumber': carNumber,
     'expireAt': reservationTimestamp
   });
+
+  await NotificationService.scheduleUserReservationReminders(
+    userId: uid,
+    reservationDate: formattedDate,
+    reservationTime: time24,
+    location: destination,
+  );
 
   ScaffoldMessenger.of(context).showSnackBar(
     const SnackBar(content: Text('예약이 완료되었습니다.')),

@@ -78,6 +78,24 @@ class _ReservationInfoWidgetState extends State<ReservationInfo> {
     }
   }
 
+  String convertTo24Hour(String date, String time) {
+    final isPM = time.contains('오후');
+    final cleanTime = time.replaceAll(RegExp(r'[오전오후 ]'), '');
+    final parts = cleanTime.split(':');
+
+    int hour = int.parse(parts[0]);
+    int minute = int.parse(parts[1]);
+
+    if (isPM && hour < 12) hour += 12;
+    if (!isPM && hour == 12) hour = 0;
+
+    final hourStr = hour.toString().padLeft(2, '0');
+    final minuteStr = minute.toString().padLeft(2, '0');
+
+    return '$date $hourStr:$minuteStr';
+  }
+
+
    Future<void> cancelReservation(Map<String, dynamic> reservation) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
@@ -87,8 +105,7 @@ class _ReservationInfoWidgetState extends State<ReservationInfo> {
     final time = reservation['time'];
     final destination = reservation['destination'];
     final carNumber = reservation['carNumber'];
-    final formattedDateTime = '$date $time';
-
+    final formattedDateTime = convertTo24Hour(date, time);
     // 고유 ID 생성 (삭제 확인용)
     final reservationId = '${date}_${time}_$destination';
 

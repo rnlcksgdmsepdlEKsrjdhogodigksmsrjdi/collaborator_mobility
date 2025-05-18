@@ -80,36 +80,60 @@ export const autoDeleteExpiredReservations = onSchedule({
   schedule: "* * * * *",
   region: "asia-northeast3",
   timeZone: "Asia/Seoul",
-  retryCount: 3 // 실패 시 재시도 횟수
+  retryCount: 3
 }, async (): Promise<void> => {
   const db = admin.database();
-  const ref = db.ref("reservations");
-  const snapshot = await ref.once("value");
+  const now = new Date();
 
-  const now = Date.now();
   const updates: Record<string, null> = {};
 
-  snapshot.forEach((locationSnap) => {
+  // 1. 글로벌 reservations 경로 정리
+  const globalRef = db.ref("reservations");
+  const globalSnapshot = await globalRef.once("value");
+
+  globalSnapshot.forEach((locationSnap) => {
     const locationKey = locationSnap.key;
     const timeSlots: Record<string, ReservationData> = locationSnap.val();
 
     Object.entries(timeSlots).forEach(([timeKey, data]) => {
-      if (data?.expireAt && data.expireAt < now) {
-        // 예약 경로 삭제
+      if (data?.expireAt && data.expireAt < Date.now()) {
         updates[`reservations/${locationKey}/${timeKey}`] = null;
 
-        // 사용자 예약 삭제 (UID 존재 시)
         if (data.uid) {
-          const [datePart, timePart] = timeKey.includes(' ') ? 
-            [timeKey.split(' ')[0], timeKey.split(' ')[1]] : 
-            [timeKey, ""];
-          
+          const [datePart, ...rest] = timeKey.split(' ');
+          const timePart = rest.join(' ');
           updates[`users/${data.uid}/reservations/${datePart}/${timePart}`] = null;
         }
       }
     });
   });
 
+  // 2. 각 users 경로 정리
+  const usersRef = db.ref("users");
+  const usersSnapshot = await usersRef.once("value");
+
+  usersSnapshot.forEach((userSnap) => {
+    const uid = userSnap.key;
+    const reservations = userSnap.child("reservations");
+
+    if (reservations.exists()) {
+      reservations.forEach((dateSnap) => {
+        const dateKey = dateSnap.key; // 예: "2025-05-17"
+        dateSnap.forEach((timeSnap) => {
+          const timeKey = timeSnap.key; // 예: "오후 8:00"
+
+          // 날짜+시간 문자열 → JS Date로 파싱
+          const dateTimeStr = `${dateKey} ${timeKey}`;
+          const parsedDate = parseKoreanDateTime(dateTimeStr);
+          if (parsedDate && parsedDate < now) {
+            updates[`users/${uid}/reservations/${dateKey}/${timeKey}`] = null;
+          }
+        });
+      });
+    }
+  });
+
+  // 3. 반영
   if (Object.keys(updates).length > 0) {
     await db.ref().update(updates);
     functions.logger.log("만료된 예약 삭제 완료", { deletedCount: Object.keys(updates).length });
@@ -117,3 +141,16 @@ export const autoDeleteExpiredReservations = onSchedule({
     functions.logger.log("삭제할 만료된 예약 없음");
   }
 });
+
+// ✅ 한국어 시간 문자열("오전 10:00", "오후 8:00")을 JS Date 객체로 변환하는 유틸 함수
+function parseKoreanDateTime(dateTimeStr: string): Date | null {
+  const [date, ampm, time] = dateTimeStr.split(" ");
+  if (!date || !ampm || !time) return null;
+
+  let [hour, minute] = time.split(":").map(Number);
+  if (ampm === "오후" && hour < 12) hour += 12;
+  if (ampm === "오전" && hour === 12) hour = 0;
+
+  const parsed = new Date(`${date}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00+09:00`);
+  return isNaN(parsed.getTime()) ? null : parsed;
+}
