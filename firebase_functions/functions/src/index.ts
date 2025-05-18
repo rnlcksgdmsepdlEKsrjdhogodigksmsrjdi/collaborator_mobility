@@ -118,11 +118,11 @@ export const autoDeleteExpiredReservations = onSchedule({
 
     if (reservations.exists()) {
       reservations.forEach((dateSnap) => {
-        const dateKey = dateSnap.key; // 예: "2025-05-17"
+        const dateKey = dateSnap.key; 
         dateSnap.forEach((timeSnap) => {
-          const timeKey = timeSnap.key; // 예: "오후 8:00"
+          const timeKey = timeSnap.key; 
 
-          // 날짜+시간 문자열 → JS Date로 파싱
+          
           const dateTimeStr = `${dateKey} ${timeKey}`;
           const parsedDate = parseKoreanDateTime(dateTimeStr);
           if (parsedDate && parsedDate < now) {
@@ -133,7 +133,7 @@ export const autoDeleteExpiredReservations = onSchedule({
     }
   });
 
-  // 3. 반영
+  
   if (Object.keys(updates).length > 0) {
     await db.ref().update(updates);
     functions.logger.log("만료된 예약 삭제 완료", { deletedCount: Object.keys(updates).length });
@@ -142,7 +142,7 @@ export const autoDeleteExpiredReservations = onSchedule({
   }
 });
 
-// ✅ 한국어 시간 문자열("오전 10:00", "오후 8:00")을 JS Date 객체로 변환하는 유틸 함수
+
 function parseKoreanDateTime(dateTimeStr: string): Date | null {
   const [date, ampm, time] = dateTimeStr.split(" ");
   if (!date || !ampm || !time) return null;

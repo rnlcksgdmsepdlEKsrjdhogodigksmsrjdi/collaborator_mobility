@@ -67,4 +67,14 @@ Future<Map<String, dynamic>?> getUserAdditionalInfo(String userId) async {
     return null;
   }
 }
+
+Future<void> updateUserAdditionalInfo(String userId, Map<String, dynamic> updates) async {
+  try{
+    await _db.child('users/$userId/additionalInfo').update(updates);
+  }
+  catch (e) {
+    print('Error updating user info: $e');
+    throw e;
+  }
+}
 }

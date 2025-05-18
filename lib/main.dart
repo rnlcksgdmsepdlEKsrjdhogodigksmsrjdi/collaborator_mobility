@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,6 +12,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'notification_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
+import 'my_page_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,7 +26,9 @@ void main() async {
   await NotificationService.initialize();
 
   initializeDateFormatting('ko_KR', null).then((_) {
-    runApp(MyApp());
+    runApp(
+      ProviderScope(child: MyApp())
+      );
   });
   
 }
@@ -52,6 +56,11 @@ class MyApp extends StatelessWidget {
           routes: {
             '/home': (context) => const MapWithBottomSheetPage(),
             '/login': (context) => const LoginPage(),
+            '/mypage': (context) {
+              final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+              return MyPageScreen(userId: userId);
+            },
+
           },
         );
       },
