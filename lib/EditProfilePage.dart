@@ -7,6 +7,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mobility/user_providers.dart';
 
 class EditProfilePage extends ConsumerStatefulWidget {
+  const EditProfilePage({super.key});
+
   @override
   ConsumerState<EditProfilePage> createState() => _EditProfilePageState();
 }

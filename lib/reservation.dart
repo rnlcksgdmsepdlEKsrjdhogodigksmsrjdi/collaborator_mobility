@@ -101,28 +101,32 @@ class _ReservationScreenState extends State<ReservationScreen> {
     final weekday = firstDay.weekday % 7;
     final daysInMonth = DateTime(currentYear, currentMonth + 1, 0).day;
 
+    final today = DateTime.now();
+    final lastAvailableDate = today.add(const Duration(days: 9)); // 오늘 포함 10일
+
     List<Map<String, dynamic>> week = [];
-    
-    // 빈 날짜 채우기
+
     for (int i = 0; i < weekday; i++) {
       week.add({'date': '', 'disabled': true});
     }
 
-    // 실제 날짜 채우기
     for (int day = 1; day <= daysInMonth; day++) {
+      final date = DateTime(currentYear, currentMonth, day);
+      bool isPast = date.isBefore(DateTime(today.year, today.month, today.day));
+      bool isBeyondLimit = date.isAfter(lastAvailableDate);
+
       week.add({
         'date': day.toString(),
-        'disabled': false,
-        'isPast': _isPastDate(DateTime(currentYear, currentMonth, day))
+        'disabled': isPast || isBeyondLimit,
+        'isBeyondLimit': isBeyondLimit,
       });
-      
+
       if (week.length == 7) {
         weeks.add(week);
         week = [];
       }
     }
 
-    // 남은 빈 날짜 채우기
     if (week.isNotEmpty) {
       while (week.length < 7) {
         week.add({'date': '', 'disabled': true});
@@ -134,6 +138,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
       calendar = weeks;
     });
   }
+
 
   void _changeMonth(int offset) {
     setState(() {
@@ -216,7 +221,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           child: SizedBox(
-            height: screenHeight * 1.3,
+            height: screenHeight * 1.1,
             child: Stack(
               children: [
                 Positioned(
@@ -252,7 +257,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
                   child: _buildCalendar(),
                 ),
                 Positioned(
-                  top: 400.h,
+                  top: 430.h,
                   left: 20.w,
                   right: 20.w,
                   child: Column(
@@ -333,7 +338,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
                   ),
                 ),
                 Positioned(
-                  bottom: 30.h,
+                  bottom: 50.h,
                   left: 20.w,
                   right: 20.w,
                   child: ElevatedButton(
@@ -412,7 +417,8 @@ class _ReservationScreenState extends State<ReservationScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('$currentYear년 $currentMonth월', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              Text('$currentYear년 $currentMonth월',
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
               Row(
                 children: [
                   IconButton(
@@ -428,28 +434,57 @@ class _ReservationScreenState extends State<ReservationScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          const Row(
-            children: [
-              _WeekDayText('일'),
-              _WeekDayText('월'),
-              _WeekDayText('화'),
-              _WeekDayText('수'),
-              _WeekDayText('목'),
-              _WeekDayText('금'),
-              _WeekDayText('토'),
-            ],
+
+          // 요일 라벨 (색상 반영)
+          Row(
+            children: List.generate(7, (index) {
+              const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
+              final Color textColor = index == 0
+                  ? const Color(0xFFFF6B6B) // 일요일 - 빨강
+                  : index == 6
+                      ? const Color(0xFF4D70B4) // 토요일 - 파랑
+                      : const Color(0xFF333333); // 평일 - 검정
+              return Expanded(
+                child: Center(
+                  child: Text(
+                    weekDays[index],
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                ),
+              );
+            }),
           ),
+
           const SizedBox(height: 10),
+
+          // 날짜 셀
           Column(
             children: calendar.map((week) {
               return Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: week.map((day) {
+                children: week.asMap().entries.map((entry) {
+                  final int index = entry.key;
+                  final Map<String, dynamic> day = entry.value;
+
                   final bool isSelected = !day['disabled'] &&
                       selectedDate != null &&
                       selectedDate!.year == currentYear &&
                       selectedDate!.month == currentMonth &&
                       selectedDate!.day == int.parse(day['date']);
+
+                  // 날짜 텍스트 색상
+                  final Color textColor = isSelected
+                      ? Colors.white
+                      : day['disabled']
+                          ? Colors.grey
+                          : index == 0
+                              ? const Color(0xFFFF6B6B) // 일요일
+                              : index == 6
+                                  ? const Color(0xFF4D70B4) // 토요일
+                                  : Colors.black;
 
                   return GestureDetector(
                     onTap: day['disabled']
@@ -457,7 +492,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
                         : () {
                             setState(() {
                               selectedDate = DateTime(currentYear, currentMonth, int.parse(day['date']));
-                              selectedTime = null; // 시간 선택 초기화
+                              selectedTime = null;
                             });
                           },
                     child: Container(
@@ -472,8 +507,8 @@ class _ReservationScreenState extends State<ReservationScreen> {
                         child: Text(
                           day['date'],
                           style: TextStyle(
-                            color: isSelected ? Colors.white : Colors.black,
-                            fontSize: 16.sp,
+                            color: textColor,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),

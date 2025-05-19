@@ -34,23 +34,38 @@ class ReservationConfirmPopup extends StatelessWidget {
 
   // 오전/오후 처리 포함된 시간 → 24시간제로 변환
   String convertTo24Hour(String time) {
-  // 예: '오후 11:30' → 'PM 11:30' 으로 변환
     time = time.replaceAll('오전', 'AM').replaceAll('오후', 'PM').trim();
-
-    // 'AM 11:30' 형식으로 파싱
     final parsed = DateFormat('a h:mm', 'en_US').parse(time);
-
-    // 24시간제 문자열로 변환
-    return DateFormat('HH:mm').format(parsed); // 결과 예: '23:30'
+    return DateFormat('HH:mm').format(parsed); 
   }
 
-  final time24 = convertTo24Hour(time); // "16:30"
-  final formattedDateTime = '$formattedDate $time24'; // "2025-05-17 16:30"
-
+  final time24 = convertTo24Hour(time); 
+  final formattedDateTime = '$formattedDate $time24'; 
   final reservationDateTime = DateFormat('yyyy-MM-dd HH:mm').parse(formattedDateTime);
   final reservationTimestamp = reservationDateTime.millisecondsSinceEpoch;
 
   final dbRef = FirebaseDatabase.instance.ref();
+  final userReservationsRef = dbRef.child('users').child(uid).child('reservations');
+
+  // 예약 개수 체크
+  final snapshot = await userReservationsRef.get();
+
+  int totalReservations = 0;
+  if (snapshot.exists) {
+    final data = snapshot.value as Map<dynamic, dynamic>;
+    for (final day in data.values) {
+      if (day is Map<dynamic, dynamic>) {
+        totalReservations += day.length;
+      }
+    }
+  }
+
+  if (totalReservations >= 3) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('예약은 최대 3개까지 가능합니다.')),
+    );
+    return;
+  }
 
   // 예약 정보 저장
   await dbRef.child('reservations').child(destination).child(formattedDateTime).set({
@@ -59,20 +74,18 @@ class ReservationConfirmPopup extends StatelessWidget {
     'expireAt': reservationTimestamp
   });
 
-  await dbRef.child('users').child(uid).child('reservations')
-      .child(formattedDate).child(time).set({
+  await userReservationsRef.child(formattedDate).child(time).set({
     'destination': destination,
     'carNumber': carNumber,
     'expireAt': reservationTimestamp
   });
-
-  
 
   ScaffoldMessenger.of(context).showSnackBar(
     const SnackBar(content: Text('예약이 완료되었습니다.')),
   );
   Navigator.of(context).pop();
 }
+
 
 
 

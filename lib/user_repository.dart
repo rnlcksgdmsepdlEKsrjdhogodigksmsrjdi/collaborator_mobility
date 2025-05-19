@@ -74,7 +74,7 @@ Future<void> updateUserAdditionalInfo(String userId, Map<String, dynamic> update
   }
   catch (e) {
     print('Error updating user info: $e');
-    throw e;
+    rethrow;
   }
 }
 }
