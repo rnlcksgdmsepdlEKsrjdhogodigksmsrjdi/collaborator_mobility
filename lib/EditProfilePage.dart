@@ -122,7 +122,11 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                         ),
                                       ),
                                       GestureDetector(
-                                        onTap: () => _showDeleteConfirmationDialog(number),
+                                        onTap: () {
+                                          setState(() {
+                                            _carNumbers.remove(number);
+                                          });
+                                        },
                                         child: Padding(
                                           padding: EdgeInsets.only(right: 16.w),
                                           child: SvgPicture.asset(
@@ -325,30 +329,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     }
   }
 
-  void _showDeleteConfirmationDialog(String carNumber) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('차량번호 삭제'),
-        content: Text('정말로 이 차량번호를 삭제하시겠습니까?'),
-        actions: [
-          TextButton(
-            child: Text('취소'),
-            onPressed: () => Navigator.pop(context),
-          ),
-          TextButton(
-            child: Text('삭제'),
-            onPressed: () {
-              setState(() {
-                _carNumbers.remove(carNumber);
-              });
-              Navigator.pop(context);
-            },
-          ),
-        ],
-      ),
-    );
-  }
+  
 
   Future<void> _updateProfile(WidgetRef ref, String userId) async {
     final updatedName = _nameController.text.trim();
@@ -370,6 +351,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
           SnackBar(content: Text('회원 정보가 성공적으로 업데이트되었습니다.')),
         );
       }
+
+      await Future.delayed(Duration(seconds: 1));
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
     } catch (e) {
       // 실패 시 에러 메시지 표시
       if (mounted) {

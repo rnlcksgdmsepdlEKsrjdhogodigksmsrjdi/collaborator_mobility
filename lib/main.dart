@@ -9,7 +9,6 @@ import 'user_info.dart';
 import 'home_page.dart';
 import 'login_page.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'notification_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import 'my_page_screen.dart';
@@ -21,25 +20,15 @@ void main() async {
     clientId: 'IGdjiddEnJx86dWfnGW0',
     clientSecret: 'dX02epXz4L',
   );
-
-  await _requestNotificationPermission();
-  await NotificationService.initialize();
-
-  initializeDateFormatting('ko_KR', null).then((_) {
+  
     runApp(
       ProviderScope(child: MyApp())
-      );
-  });
+    );
+  
   
 }
 
-Future<bool> _requestNotificationPermission() async {
-  if (Platform.isAndroid && await Permission.notification.isDenied) {
-    final status = await Permission.notification.request();
-    return status.isGranted;
-  }
-  return true; // 이미 허용되어 있거나 Android가 아님
-}
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

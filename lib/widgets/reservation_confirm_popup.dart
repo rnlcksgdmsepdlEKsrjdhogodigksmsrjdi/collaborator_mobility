@@ -5,7 +5,7 @@ import 'dart:math' as math;
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:mobility/notification_service.dart';
+
 
 class ReservationConfirmPopup extends StatelessWidget {
   final String destination;
@@ -66,12 +66,7 @@ class ReservationConfirmPopup extends StatelessWidget {
     'expireAt': reservationTimestamp
   });
 
-  await NotificationService.scheduleUserReservationReminders(
-    userId: uid,
-    reservationDate: formattedDate,
-    reservationTime: time24,
-    location: destination,
-  );
+  
 
   ScaffoldMessenger.of(context).showSnackBar(
     const SnackBar(content: Text('예약이 완료되었습니다.')),

@@ -1,5 +1,3 @@
-// 게정 탈퇴 관련 코드입니다.
-
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -12,23 +10,33 @@ class UserService {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // DB에서 provider, email 가져오기 
-    final provider = await _getUserProvider(user.uid);
+    final uid = user.uid; // 🔸 탈퇴 전 미리 UID 저장
+    final provider = await _getUserProvider(uid);
     final userEmail = user.email ?? '';
-    String userPassword = ''; // passwd는 확인용으로 존재 
+    String userPassword = '';
 
     try {
       if (provider == 'password') {
-        // 이메일 로그인 사용자만 비밀번호 입력 다이얼로그 표시
         userPassword = await showDialog<String>(
-          context: context,
-          builder: (_) => PasswordInputDialog(),
-        ) ?? '';
-        
+              context: context,
+              builder: (_) => const PasswordInputDialog(),
+            ) ??
+            '';
         if (userPassword.isEmpty) return;
       }
-      
-      await _handleDelete(context, user, userEmail, userPassword, provider); // 탈퇴
+
+      final reauthSuccess = await _reauthenticate(user, userEmail, userPassword, provider);
+      if (!reauthSuccess) throw Exception("재인증 실패");
+
+      await _deleteUserData(user, uid);
+      await _signOutAllProviders();
+
+      if (context.mounted) {
+        Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("회원 탈퇴가 완료되었습니다.")),
+        );
+      }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -38,9 +46,6 @@ class UserService {
     }
   }
 
-  // uid provider 제공 
-  // 원래는 auth에서 provider를 기본으로 제공해주는데 네이버 로그인 같은 경우는 auth 주관이 아니라서 db에 저장함
-  // 이를 불러옴
   Future<String?> _getUserProvider(String uid) async {
     final snapshot = await FirebaseDatabase.instance
         .ref()
@@ -49,24 +54,7 @@ class UserService {
     return snapshot.value?.toString();
   }
 
-  // 탈퇴 함수
-  Future<void> _handleDelete(BuildContext context, User user, String email, String password, String? provider) async {
-    final success = await _reauthenticate(user, email, password, provider);
-    if (!success) throw Exception("재인증 실패");
-
-    await _deleteUserDataAndLogout(user);
-
-    if (context.mounted) {
-      Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("회원 탈퇴가 완료되었습니다.")),
-      );
-    }
-  }
-
-  // 재인증 함수
   Future<bool> _reauthenticate(User user, String email, String password, String? provider) async {
-    // 이메일 유저만 passwd 입력 후 진행하게 함 
     try {
       if (provider == 'password') {
         await user.reauthenticateWithCredential(
@@ -74,7 +62,8 @@ class UserService {
         );
         return true;
       } else if (provider == 'google.com') {
-        final googleUser = await GoogleSignIn().signIn(); // 다시 로그인하는 과정을 통해서 재인증 
+        await GoogleSignIn().signOut(); // 🔸 기존 세션 로그아웃
+        final googleUser = await GoogleSignIn().signIn();
         if (googleUser == null) return false;
 
         final googleAuth = await googleUser.authentication;
@@ -85,7 +74,7 @@ class UserService {
         await user.reauthenticateWithCredential(credential);
         return true;
       } else if (provider == 'naver') {
-        return await _reauthenticateWithNaver(); // 네이버는 따로 처리하는 함수 진행 
+        return await _reauthenticateWithNaver();
       }
       return false;
     } catch (e) {
@@ -93,15 +82,14 @@ class UserService {
       return false;
     }
   }
-  // 네이버 재인증 - 다시 로그인 해서 되는지 확인
+
   Future<bool> _reauthenticateWithNaver() async {
     try {
-      // 네이버 로그인 성공 여부 확인
       final isLoginSuccess = Completer<bool>();
-      
+
       await NaverLoginSDK.authenticate(
         callback: OAuthLoginCallback(
-          onSuccess: () async {
+          onSuccess: () {
             isLoginSuccess.complete(true);
           },
           onFailure: (_, msg) {
@@ -120,27 +108,24 @@ class UserService {
     }
   }
 
-  Future<void> _deleteUserDataAndLogout(User user) async {
-    // DB에 저장된 유저 내용 삭제 
-    final userRef = FirebaseDatabase.instance.ref().child('users/${user.uid}');
-    await userRef.remove();
-    
-    // Firebase 계정 삭제
-    await user.delete();
-    
-    // 모든 로그아웃 처리
-    await FirebaseAuth.instance.signOut();
-    await GoogleSignIn().signOut();
+  Future<void> _deleteUserData(User user, String uid) async {
+    final userRef = FirebaseDatabase.instance.ref().child('users/$uid');
+    await userRef.remove(); // 🔸 먼저 DB 삭제
+    await user.delete(); // 🔸 재인증 후 즉시 delete
+  }
+
+  Future<void> _signOutAllProviders() async {
+    await GoogleSignIn().signOut(); // 🔸 Google 로그아웃은 먼저
     await NaverLoginSDK.logout();
+    await FirebaseAuth.instance.signOut();
   }
 }
 
-// 비밀번호 입력
 class PasswordInputDialog extends StatefulWidget {
   const PasswordInputDialog({super.key});
 
   @override
-  _PasswordInputDialogState createState() => _PasswordInputDialogState();
+  State<PasswordInputDialog> createState() => _PasswordInputDialogState();
 }
 
 class _PasswordInputDialogState extends State<PasswordInputDialog> {
