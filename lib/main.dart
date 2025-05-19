@@ -8,9 +8,6 @@ import 'package:naver_login_sdk/naver_login_sdk.dart';
 import 'user_info.dart';
 import 'home_page.dart';
 import 'login_page.dart';
-import 'package:intl/date_symbol_data_local.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'dart:io';
 import 'my_page_screen.dart';
 
 void main() async {

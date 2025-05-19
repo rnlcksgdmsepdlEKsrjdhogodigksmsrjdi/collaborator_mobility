@@ -50,163 +50,170 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
     return Scaffold(
       body: SafeArea(
-        child: Container(
-          color: Colors.white,
-          child: Column(
-            children: [
-              _buildHeader(context),
-              Expanded(
-                child: userInfoAsync.when(
-                  loading: () => Center(child: CircularProgressIndicator()),
-                  error: (error, stack) => Center(child: Text('로드 실패')),
-                  data: (userInfo) {
-                    if (mounted && userInfo != null) {
-                      _nameController.text = userInfo['name'] ?? '';
-                      _phoneController.text = userInfo['phone'] ?? '';
-                      if (_carNumbers.isEmpty) {
-                        final carNumbers = userInfo['carNumbers'];
-                        if (carNumbers is List) {
-                          _carNumbers = carNumbers.whereType<String>().toList();
-                        } else if (carNumbers is String) {
-                          _carNumbers = [carNumbers];
+        child: Center(
+          child: SizedBox(
+            width: 390.w,
+            height: 844.h,
+            child: Container(
+              color: Colors.white,
+              child: Column(
+                children: [
+                  _buildHeader(context),
+                  Expanded(
+                    child: userInfoAsync.when(
+                      loading: () => Center(child: CircularProgressIndicator()),
+                      error: (error, stack) => Center(child: Text('로드 실패')),
+                      data: (userInfo) {
+                        if (mounted && userInfo != null) {
+                          _nameController.text = userInfo['name'] ?? '';
+                          _phoneController.text = userInfo['phone'] ?? '';
+                          if (_carNumbers.isEmpty) {
+                            final carNumbers = userInfo['carNumbers'];
+                            if (carNumbers is List) {
+                              _carNumbers = carNumbers.whereType<String>().toList();
+                            } else if (carNumbers is String) {
+                              _carNumbers = [carNumbers];
+                            }
+                          }
                         }
-                      }
-                    }
 
-                    return SingleChildScrollView(
-                      padding: EdgeInsets.symmetric(horizontal: 20.w),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(height: 20.h),
-                          _buildInputField(label: '이름', controller: _nameController),
-                          SizedBox(height: 20.h),
-                          userEmailAsync.when(
-                            loading: () => CircularProgressIndicator(),
-                            error: (e, s) => Text('이메일 로드 실패'),
-                            data: (email) => _buildReadOnlyField(label: '이메일', value: email ?? '이메일 없음'),
-                          ),
-                          SizedBox(height: 20.h),
-                          _buildInputField(
-                            label: '전화번호',
-                            controller: _phoneController,
-                            keyboardType: TextInputType.phone,
-                          ),
-                          SizedBox(height: 20.h),
-                          Text(
-                            '차량번호',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontFamily: 'Paperlogy',
-                              fontSize: 23.sp,
-                            ),
-                          ),
-                          SizedBox(height: 10.h),
-                          ..._carNumbers.map((number) => Padding(
-                                padding: EdgeInsets.only(bottom: 8.h),
-                                child: Container(
-                                  width: double.infinity,
-                                  height: 43.h,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: Color(0xFFD9D9D9)),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Padding(
-                                          padding: EdgeInsets.symmetric(horizontal: 10.w),
-                                          child: Text(
-                                            number,
-                                            style: TextStyle(fontSize: 16.sp),
+                        return SingleChildScrollView(
+                          padding: EdgeInsets.symmetric(horizontal: 20.w),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(height: 20.h),
+                              _buildInputField(label: '이름', controller: _nameController),
+                              SizedBox(height: 20.h),
+                              userEmailAsync.when(
+                                loading: () => CircularProgressIndicator(),
+                                error: (e, s) => Text('이메일 로드 실패'),
+                                data: (email) => _buildReadOnlyField(label: '이메일', value: email ?? '이메일 없음'),
+                              ),
+                              SizedBox(height: 20.h),
+                              _buildInputField(
+                                label: '전화번호',
+                                controller: _phoneController,
+                                keyboardType: TextInputType.phone,
+                              ),
+                              SizedBox(height: 20.h),
+                              Text(
+                                '차량번호',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontFamily: 'Paperlogy',
+                                  fontSize: 23.sp,
+                                ),
+                              ),
+                              SizedBox(height: 10.h),
+                              ..._carNumbers.map((number) => Padding(
+                                    padding: EdgeInsets.only(bottom: 8.h),
+                                    child: Container(
+                                      width: double.infinity,
+                                      height: 43.h,
+                                      decoration: BoxDecoration(
+                                        border: Border.all(color: Color(0xFFD9D9D9)),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Padding(
+                                              padding: EdgeInsets.symmetric(horizontal: 10.w),
+                                              child: Text(
+                                                number,
+                                                style: TextStyle(fontSize: 20.sp),
+                                              ),
+                                            ),
+                                          ),
+                                          GestureDetector(
+                                            onTap: () {
+                                              setState(() {
+                                                _carNumbers.remove(number);
+                                              });
+                                            },
+                                            child: Padding(
+                                              padding: EdgeInsets.only(right: 16.w),
+                                              child: SvgPicture.asset(
+                                                'assets/images/minusIcon.svg',
+                                                width: 20.w,
+                                                height: 20.h,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )),
+                              Container(
+                                width: double.infinity,
+                                height: 43.h,
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Color(0xFFD9D9D9), width: 1),
+                                  borderRadius: BorderRadius.circular(5.r),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Padding(
+                                        padding: EdgeInsets.symmetric(horizontal: 10.w),
+                                        child: TextField(
+                                          controller: _carNumberController,
+                                          decoration: InputDecoration(
+                                            border: InputBorder.none,
+                                            hintText: '차량번호를 입력하세요',
+                                            hintStyle: TextStyle(color: Color(0xFFB4B4B4)),
                                           ),
                                         ),
                                       ),
-                                      GestureDetector(
-                                        onTap: () {
-                                          setState(() {
-                                            _carNumbers.remove(number);
-                                          });
-                                        },
-                                        child: Padding(
-                                          padding: EdgeInsets.only(right: 16.w),
-                                          child: SvgPicture.asset(
-                                            'assets/images/minusIcon.svg',
-                                            width: 20.w,
-                                            height: 20.h,
-                                          ),
+                                    ),
+                                    GestureDetector(
+                                      onTap: _addCarNumber,
+                                      child: Padding(
+                                        padding: EdgeInsets.only(right: 16.w),
+                                        child: SvgPicture.asset(
+                                          'assets/images/plusIcon.svg',
+                                          width: 20.w,
+                                          height: 20.h,
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                ),
-                              )),
-                          Container(
-                            width: double.infinity,
-                            height: 43.h,
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Color(0xFFD9D9D9)),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 10.w),
-                                    child: TextField(
-                                      controller: _carNumberController,
-                                      decoration: InputDecoration(
-                                        border: InputBorder.none,
-                                        hintText: '차량번호를 입력하세요',
-                                        hintStyle: TextStyle(color: Color(0xFFB4B4B4)),
-                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                                GestureDetector(
-                                  onTap: _addCarNumber,
-                                  child: Padding(
-                                    padding: EdgeInsets.only(right: 16.w),
-                                    child: SvgPicture.asset(
-                                      'assets/images/plusIcon.svg',
-                                      width: 20.w,
-                                      height: 20.h,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                              SizedBox(height: 40.h),
+                            ],
                           ),
-                          SizedBox(height: 40.h),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.only(bottom: 20.h),
-                child: GestureDetector(
-                  onTap: () => _updateProfile(ref, userId),
-                  child: Container(
-                    width: 350.w,
-                    height: 50.h,
-                    decoration: BoxDecoration(
-                      color: Color(0xFF030361),
-                      borderRadius: BorderRadius.circular(5),
+                        );
+                      },
                     ),
-                    child: Center(
-                      child: Text(
-                        '확인',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontFamily: 'Paperlogy',
-                          fontSize: 20.sp,
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(bottom: 20.h),
+                    child: GestureDetector(
+                      onTap: () => _updateProfile(ref, userId),
+                      child: Container(
+                        width: 350.w,
+                        height: 50.h,
+                        decoration: BoxDecoration(
+                          color: Color(0xFF030361),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: Center(
+                          child: Text(
+                            '확인',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontFamily: 'Paperlogy',
+                              fontSize: 20.sp,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-              )
-            ],
+                  )
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -215,27 +222,32 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
-      child: Row(
+      padding: EdgeInsets.symmetric(vertical: 15.h, horizontal: 20.w),
+      child: Stack(
         children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: SvgPicture.asset(
-              'assets/images/icon.svg',
-              width: 28.w,
-              height: 28.h,
+          // 뒤로 가기 아이콘 (왼쪽 고정)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: SvgPicture.asset(
+                'assets/images/icon.svg',
+                width: 28.w,
+                height: 28.h,
+              ),
             ),
           ),
-          Spacer(),
-          Text(
-            '마이페이지',
-            style: TextStyle(
-              fontSize: 20.sp,
-              fontFamily: 'Paperlogy',
-              color: Colors.black,
+          // 텍스트 (정확한 중앙)
+          Center(
+            child: Text(
+              '마이페이지',
+              style: TextStyle(
+                fontSize: 20.sp,
+                fontFamily: 'Paperlogy',
+                color: Colors.black,
+              ),
             ),
           ),
-          Spacer(flex: 2),
         ],
       ),
     );
@@ -262,7 +274,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         Container(
           height: 43.h,
           decoration: BoxDecoration(
-            border: Border.all(color: Color(0xFFD9D9D9)),
+            border: Border.all(color: Color(0xFFD9D9D9), width: 1),
+            borderRadius: BorderRadius.circular(5.r),
           ),
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: 10.w),
@@ -274,8 +287,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                 border: InputBorder.none,
                 hintText: '$label을 입력하세요',
                 hintStyle: TextStyle(color: Color(0xFFB4B4B4)),
+                 contentPadding: EdgeInsets.symmetric(vertical: 6.h),
               ),
-              style: TextStyle(fontSize: 16.sp, color: Colors.black),
+              style: TextStyle(fontSize: 20.sp, color: Colors.black),
             ),
           ),
         ),
@@ -302,7 +316,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         Container(
           height: 43.h,
           decoration: BoxDecoration(
-            border: Border.all(color: Color(0xFFD9D9D9)),
+            border: Border.all(color: Color(0xFFD9D9D9), width: 1),
+            borderRadius: BorderRadius.circular(5.r),
           ),
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: 10.w),

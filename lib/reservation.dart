@@ -345,6 +345,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
                       ),
                     ),
                     onPressed: () async {
+                      
                       if (selectedDate != null && selectedTime != null && selectedCarNumber != null) {
                         final dateKey = _formatDateKey(selectedDate!);
                         final period = selectedTime!.split(' ')[0]; // 오전 오후
@@ -534,7 +535,7 @@ class TimeButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           side: BorderSide(
             color: isSelected
-            ? Colors.blue
+            ? const Color(0xFF45539D)
             : isDisabled
               ? Colors.grey.shade300
               : Colors.grey.shade500,

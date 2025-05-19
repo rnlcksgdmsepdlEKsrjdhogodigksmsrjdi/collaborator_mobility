@@ -261,19 +261,23 @@ class _ReservationInfoWidgetState extends State<ReservationInfo> {
           children: <Widget>[
             // 상단 아이콘과 제목
             Positioned(
-              top: 45.h,
+              top: 49.h,
               left: 20.w,
               child: SizedBox(
                 width: 28.w,
                 height: 28.h,
-                child: SvgPicture.asset(
+                child: GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: SvgPicture.asset(
                   'assets/images/icon.svg',
                   semanticsLabel: 'icon',
                 ),
+                )
+                
               ),
             ),
             Positioned(
-              top: 49.h,
+              top: 52.h,
               left: 158.w,
               child: Text(
                 '예약 내역',
@@ -330,7 +334,7 @@ class _ReservationInfoWidgetState extends State<ReservationInfo> {
                                     SvgPicture.asset('assets/images/location.svg', semanticsLabel: 'location'),
                                     SizedBox(height: 17),
                                     SvgPicture.asset('assets/images/time.svg', semanticsLabel: 'time'),
-                                    SizedBox(height: 17),
+                                    SizedBox(height: 19),
                                     SvgPicture.asset('assets/images/carNumber.svg', semanticsLabel: 'carnumber'),
                                   ],
                                 ),
@@ -338,8 +342,8 @@ class _ReservationInfoWidgetState extends State<ReservationInfo> {
 
                               // 텍스트 정보
                               Positioned(
-                                top: 23.h,
-                                left: 90.w,
+                                top: 17.h,
+                                left: 70.w,
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -347,12 +351,12 @@ class _ReservationInfoWidgetState extends State<ReservationInfo> {
                                       item['destination'] ?? '',
                                       style: TextStyle(fontFamily: 'Paperlogy', fontSize: 16.sp),
                                     ),
-                                    SizedBox(height: 17.h),
+                                    SizedBox(height: 11.h),
                                     Text(
                                       '${item['date']} ${item['time']}',
                                       style: TextStyle(fontFamily: 'Paperlogy', fontSize: 16.sp),
                                     ),
-                                    SizedBox(height: 17.h),
+                                    SizedBox(height: 10.h),
                                     Text(
                                       item['carNumber'] ?? '',
                                       style: TextStyle(fontFamily: 'Paperlogy', fontSize: 16.sp),
