@@ -338,6 +338,12 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
   void _addCarNumber() {
     final newNumber = _carNumberController.text.trim();
+    if (_carNumbers.length >= 3) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('차량번호는 최대 3개까지만 등록할 수 있습니다.')),
+      );
+      return;
+    }
     if (newNumber.isNotEmpty && !_carNumbers.contains(newNumber)) {
       setState(() {
         _carNumbers.add(newNumber);

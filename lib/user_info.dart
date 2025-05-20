@@ -28,13 +28,30 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
   }
 
   void _addCarNumber() {
-    if (_currentCarController.text.isNotEmpty) {
+    final newCar = _currentCarController.text.trim();
+
+    if (newCar.isNotEmpty) {
+      if (_carNumbers.length >= 3) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('차량번호는 최대 3개까지 등록할 수 있습니다')),
+        );
+        return;
+      }
+
+      if (_carNumbers.contains(newCar)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('이미 등록된 차량번호입니다')),
+        );
+        return;
+      }
+
       setState(() {
-        _carNumbers.add(_currentCarController.text);
+        _carNumbers.add(newCar);
         _currentCarController.clear();
       });
     }
   }
+
 
   void _removeCarNumber(int index) {
     setState(() {
@@ -47,8 +64,9 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
   final phone = _phoneController.text.trim();
   final tempCar = _currentCarController.text.trim();
 
-  // 차량 번호가 하나라도 입력되었으면 _carNumbers에 추가 (plus 버튼 안 눌러도)
-  if (tempCar.isNotEmpty && !_carNumbers.contains(tempCar)) {
+  if (tempCar.isNotEmpty &&
+      !_carNumbers.contains(tempCar) &&
+      _carNumbers.length < 3) {
     _carNumbers.add(tempCar);
   }
 

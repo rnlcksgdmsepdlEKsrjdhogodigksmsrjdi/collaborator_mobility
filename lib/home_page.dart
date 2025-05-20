@@ -24,6 +24,7 @@ class _MapWithBottomSheetPageState extends State<MapWithBottomSheetPage>
   String? _userName;
   final UserRepository _userRepository = UserRepository();
   bool _isLoading = false; // 로딩 상태 추가
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
