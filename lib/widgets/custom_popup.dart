@@ -147,7 +147,7 @@ class _CustomPopupState extends State<CustomPopup>
                           decoration: TextDecoration.none,
                         ),
                       ),
-                    ],
+                    ], 
                   ),
                 ),
                 Positioned(

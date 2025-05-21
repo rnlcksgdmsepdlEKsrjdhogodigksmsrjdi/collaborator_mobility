@@ -4,6 +4,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:mobility/find_id.dart';
+import 'package:mobility/find_pw.dart';
 import 'package:mobility/sign_in_page.dart';
 import 'package:naver_login_sdk/naver_login_sdk.dart';
 import 'dart:convert';
@@ -492,18 +494,27 @@ Future<void> signInWithNaver() async {
             Positioned(
               top: 279.h,
               left: 99.w,
-              child: Text(
-                '아이디 찾기',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: const Color.fromRGBO(217, 217, 217, 1),
-                  fontFamily: 'Paperlogy',
-                  fontSize: 14.sp,
-                  letterSpacing: -0.5,
-                  fontWeight: FontWeight.normal,
-                  height: 1.43,
+              child: GestureDetector(
+                onTap:() {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const FindIDPage()),
+                  );
+                },
+                child: Text(
+                  '아이디 찾기',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: const Color.fromRGBO(217, 217, 217, 1),
+                    fontFamily: 'Paperlogy',
+                    fontSize: 14.sp,
+                    letterSpacing: -0.5,
+                    fontWeight: FontWeight.normal,
+                    height: 1.43,
+                  ),
                 ),
-              ),
+              )
+              
             ),
             Positioned(
               top: 281.h,
@@ -520,18 +531,26 @@ Future<void> signInWithNaver() async {
             Positioned(
               top: 279.h,
               left: 228.w,
-              child: Text(
-                '비밀번호 찾기',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: const Color.fromRGBO(217, 217, 217, 1),
-                  fontFamily: 'Paperlogy',
-                  fontSize: 14.sp,
-                  letterSpacing: -0.5,
-                  fontWeight: FontWeight.normal,
-                  height: 1.43,
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const FindpwPage()),
+                  );
+                },
+                child: Text(
+                  '비밀번호 찾기',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: const Color.fromRGBO(217, 217, 217, 1),
+                    fontFamily: 'Paperlogy',
+                    fontSize: 14.sp,
+                    letterSpacing: -0.5,
+                    fontWeight: FontWeight.normal,
+                    height: 1.43,
+                  ),
                 ),
-              ),
+              )
             ),
           ],
         ),

@@ -8,6 +8,7 @@ import * as admin from "firebase-admin";
 import { setGlobalOptions } from "firebase-functions/v2/options";
 import { Request, Response } from "express";
 import { onSchedule } from "firebase-functions/v2/scheduler";
+import { onRequest } from "firebase-functions/https";
 
 // Firebase functions을 위해 IAM 지역 / functions 지역 동기화
 setGlobalOptions({ region: "asia-northeast3" });
@@ -157,34 +158,45 @@ function parseKoreanDateTime(dateTimeStr: string): Date | null {
   return isNaN(parsed.getTime()) ? null : parsed;
 }
 
-export const generateTempPassword = functions.https.onCall(
-  async (request: functions.https.CallableRequest<{ email: string }>, context) => {
-    const email = request.data.email;
+export const generateTempPassword = onRequest(async (req, res) => {
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "POST");
 
+  if (req.method === "OPTIONS") {
+    res.status(204).send();
+    return;
+  }
+  
+  const { email, name, phone } = req.body;
+
+  if (!email || !name || !phone) {
+    res.status(400).send("email, name, phone 필수");
+    return;
+  }
+
+  try {
     const userRecord = await admin.auth().getUserByEmail(email);
+    const uid = userRecord.uid;
 
-    // email/password 제공자인지 확인
-    const isEmailProvider = userRecord.providerData.some(
-      (provider) => provider.providerId === "password"
-    );
+    // Realtime Database 조회
+    const userSnapshot = await admin.database().ref(`users/${uid}/additionalInfo`).once("value");
+    const userData = userSnapshot.val();
 
-    if (!isEmailProvider) {
-      throw new functions.https.HttpsError(
-        "failed-precondition",
-        "이메일/비밀번호로 가입한 사용자만 비밀번호 찾기가 가능합니다."
-      );
+    if (!userData || userData.name !== name || userData.phone !== phone) {
+      res.status(400).send("일치하는 사용자 정보가 없습니다.");
+      return;
     }
 
-    // 임시 비밀번호 생성
-    const tempPassword = generateRandomPassword();
+    const tempPassword = generateRandomPassword(); // 기존 함수 그대로 사용
+    await admin.auth().updateUser(uid, { password: tempPassword });
 
-    await admin.auth().updateUser(userRecord.uid, {
-      password: tempPassword,
-    });
+    res.status(200).json({ tempPassword });
 
-    return { tempPassword };
+  } catch (error) {
+    console.error("임시 비밀번호 발급 실패:", error);
+    res.status(500).send("임시 비밀번호 발급 실패");
   }
-);
+});
 
 // 임시 비밀번호 생성 함수
 function generateRandomPassword(): string {
