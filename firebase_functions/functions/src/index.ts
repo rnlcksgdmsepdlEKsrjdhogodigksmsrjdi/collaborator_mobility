@@ -71,13 +71,15 @@ export const naverLogin = functions.https.onRequest(
   }
 );
 
+
+
 interface ReservationData {
   expireAt?: number;
   uid?: string;
 }
 
 export const autoDeleteExpiredReservations = onSchedule({
-  schedule: "* * * * *",
+  schedule: "0 */4 * * *",
   region: "asia-northeast3",
   timeZone: "Asia/Seoul",
   retryCount: 3
@@ -154,3 +156,44 @@ function parseKoreanDateTime(dateTimeStr: string): Date | null {
   const parsed = new Date(`${date}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00+09:00`);
   return isNaN(parsed.getTime()) ? null : parsed;
 }
+
+export const generateTempPassword = functions.https.onCall(
+  async (request: functions.https.CallableRequest<{ email: string }>, context) => {
+    const email = request.data.email;
+
+    const userRecord = await admin.auth().getUserByEmail(email);
+
+    // email/password 제공자인지 확인
+    const isEmailProvider = userRecord.providerData.some(
+      (provider) => provider.providerId === "password"
+    );
+
+    if (!isEmailProvider) {
+      throw new functions.https.HttpsError(
+        "failed-precondition",
+        "이메일/비밀번호로 가입한 사용자만 비밀번호 찾기가 가능합니다."
+      );
+    }
+
+    // 임시 비밀번호 생성
+    const tempPassword = generateRandomPassword();
+
+    await admin.auth().updateUser(userRecord.uid, {
+      password: tempPassword,
+    });
+
+    return { tempPassword };
+  }
+);
+
+// 임시 비밀번호 생성 함수
+function generateRandomPassword(): string {
+  const chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#\$%^&*";
+  let password = "";
+  for (let i = 0; i < 10; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+}
+
