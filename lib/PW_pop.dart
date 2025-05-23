@@ -5,9 +5,9 @@ class PWPopupDialog extends StatelessWidget {
   final String tempPassword;
 
   const PWPopupDialog({
-    Key? key,
+    super.key,
     required this.tempPassword, // 파라미터 properly 선언
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
