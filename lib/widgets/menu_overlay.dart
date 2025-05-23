@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:mobility/FAQ.dart';
 import 'package:mobility/reservation_info.dart';
 import '../my_page_screen.dart';
 import '../widgets/delete_user_popup.dart';
@@ -210,9 +211,17 @@ class MenuOverlay extends StatelessWidget {
 
           // FAQ
           Positioned(
-            top: 221.h, // 기존 196.h → 아래로 10
+            top: 221.h,
             left: 31.w,
-            child: _text('FAQ', 23.sp, Colors.black, 0.87),
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => FAQScreen()), // FaqPage는 이동할 페이지 위젯
+                );
+              },
+              child: _text('FAQ', 23.sp, Colors.black, 0.87),
+            ),
           ),
 
           // 로그아웃

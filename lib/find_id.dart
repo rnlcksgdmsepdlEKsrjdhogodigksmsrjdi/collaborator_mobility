@@ -4,7 +4,7 @@ import 'package:firebase_database/firebase_database.dart'; // 추가
 import 'ID_pop.dart';
 
 class FindIDPage extends StatelessWidget {
-  const FindIDPage({Key? key}) : super(key: key);
+  const FindIDPage({super.key});
 
   @override
   Widget build(BuildContext context) {

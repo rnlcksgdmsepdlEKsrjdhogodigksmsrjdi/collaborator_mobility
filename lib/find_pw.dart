@@ -6,7 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'PW_pop.dart'; 
 
 class FindpwPage extends StatelessWidget {
-  const FindpwPage({Key? key}) : super(key: key);
+  const FindpwPage({super.key});
 
   Future<void> requestTempPassword(BuildContext context, String id, String name, String phone) async {
     if (id.isEmpty || name.isEmpty || phone.isEmpty) {
