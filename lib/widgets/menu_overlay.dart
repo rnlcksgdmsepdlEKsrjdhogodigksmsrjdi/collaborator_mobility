@@ -2,6 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mobility/FAQ.dart';
+import 'package:mobility/edit_password.dart';
+import 'package:mobility/reauthenticateUser.dart';
 import 'package:mobility/reservation_info.dart';
 import '../my_page_screen.dart';
 import '../widgets/delete_user_popup.dart';
@@ -10,8 +12,9 @@ class MenuOverlay extends StatelessWidget {
   final VoidCallback onClose;
   final String userName;
   final VoidCallback onLogout;
+  final AuthService _authService = AuthService();
 
-  const MenuOverlay({
+  MenuOverlay({
     super.key, 
     required this.onClose,
     required this.onLogout,
@@ -133,7 +136,32 @@ class MenuOverlay extends StatelessWidget {
       },
     );
   }
+  
+  Future<void> _navigateToPwEditPage(BuildContext context) async {
+    final user = FirebaseAuth.instance.currentUser;
 
+    final isEmailUser = user?.providerData.any((info) => info.providerId == 'password') ?? false;
+
+    if(!isEmailUser){
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '이메일 가입 사용자만 비밀번호를 수정할 수 있습니다.',
+            ),
+        duration: const Duration(seconds: 2),
+        ),        
+      );
+      return;
+    }
+    final isAuthenticated = await _authService.reauthenticateUser(context);
+
+    if (isAuthenticated) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => ChangePasswordScreen()),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -196,7 +224,7 @@ class MenuOverlay extends StatelessWidget {
 
           // 예약 내역
           Positioned(
-            top: 182.h, 
+            top: 162.h, 
             left: 29.w,
             child: GestureDetector(
               onTap:() {
@@ -211,7 +239,7 @@ class MenuOverlay extends StatelessWidget {
 
           // FAQ
           Positioned(
-            top: 221.h,
+            top: 196.h,
             left: 31.w,
             child: GestureDetector(
               onTap: () {
@@ -224,6 +252,15 @@ class MenuOverlay extends StatelessWidget {
             ),
           ),
 
+          // 비밀번호 수정
+          Positioned(
+            top: 229.h,
+            left: 31.w,
+            child: GestureDetector(
+              onTap: () => _navigateToPwEditPage(context),
+              child: _text('비밀번호 수정', 23.sp, Colors.black, 0.87),
+            ),
+          ),
           // 로그아웃
           Positioned(
             top: 280.h, // 기존 260.h → 아래로 10
