@@ -1,41 +1,38 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.mobility">
 
-    <!-- 권한 설정 (기존 + 알림 권한) -->
+    <!-- 권한 설정 -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <!-- 알림 권한 (필수) -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" /> <!-- Android 13+ 필수 -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" /> <!-- 정확한 알림 스케줄링 -->
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" /> <!-- Android 12+ -->
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" /> <!-- 재부팅 후 알림 복구 -->
-    <!-- Vibrate 권한 (선택사항) -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:name="${applicationName}"
         android:label="mobility"
         android:icon="@mipmap/ic_launcher"
-        android:usesCleartextTraffic="true"> <!-- HTTP 허용 (필요시) -->
+        android:usesCleartextTraffic="true">
 
-        <!-- 알림 채널 메타데이터 추가 -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="reservation_channel" /> <!-- 코드와 일치해야 함 -->
+            android:value="reservation_channel" />
 
-        <!-- 부팅 후 알림 재등록 리시버 추가 -->
         <receiver
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.QUICKBOOT_POWERON" /> <!-- LG 기기 지원 -->
-                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" /> <!-- 앱 업데이트 시 -->
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
 
-        <!-- 기존 MainActivity 유지 -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -53,7 +50,6 @@
             </intent-filter>
         </activity>
 
-        <!-- 네이버 로그인 Activity (기존 유지) -->
         <activity
             android:name="com.naver.login.OAuthLoginActivity"
             android:launchMode="singleTask"
@@ -68,13 +64,11 @@
             </intent-filter>
         </activity>
 
-        <!-- Flutter 설정 (기존 유지) -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
 
-    <!-- 기타 쿼리 인텐트 (기존 유지) -->
     <queries>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT" />

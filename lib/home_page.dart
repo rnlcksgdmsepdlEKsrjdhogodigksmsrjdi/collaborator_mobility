@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:mobility/EditProfilePage.dart';
 import 'package:mobility/edit_password.dart';
@@ -10,6 +11,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'frame28_widget.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'user_repository.dart';
+
 
 class MapWithBottomSheetPage extends StatefulWidget {
   const MapWithBottomSheetPage({super.key});
@@ -28,6 +30,7 @@ class _MapWithBottomSheetPageState extends State<MapWithBottomSheetPage>
   final UserRepository _userRepository = UserRepository();
   bool _isLoading = false; // 로딩 상태 추가
   final ScrollController _scrollController = ScrollController();
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   
   @override
   void initState() {
@@ -35,6 +38,7 @@ class _MapWithBottomSheetPageState extends State<MapWithBottomSheetPage>
     _initWebView();
     _initAnimation();
     _loadUserName(); // 앱 시작 시 사용자 이름 로드
+    _initFirebaseMessaging();
   }
 
   void _initWebView() {
@@ -121,6 +125,43 @@ class _MapWithBottomSheetPageState extends State<MapWithBottomSheetPage>
     if (mounted) setState(() => _isLoading = false);
   }
 }
+
+void _initFirebaseMessaging() async {
+    // 권한 요청
+    NotificationSettings settings = await _firebaseMessaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      debugPrint('✅ 알림 권한 허용됨');
+
+      // 토큰 가져오기 (디버그용, 서버에서 알림 보낼 때 필요)
+      String? token = await _firebaseMessaging.getToken();
+      debugPrint('✅ FCM 토큰: $token');
+
+      // 포그라운드 메시지 수신 처리
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        if (message.notification != null) {
+          final title = message.notification!.title ?? '알림';
+          final body = message.notification!.body ?? '';
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('$title\n$body'),
+              duration: const Duration(seconds: 4),
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          );
+        }
+      });
+    } else {
+      debugPrint('❌ 알림 권한 거부됨');
+    }
+  }
 
   void _openMenu() {
     if (_isLoading) {
