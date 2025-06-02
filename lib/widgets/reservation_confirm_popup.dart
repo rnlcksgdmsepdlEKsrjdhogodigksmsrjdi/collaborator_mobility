@@ -71,7 +71,8 @@ class ReservationConfirmPopup extends StatelessWidget {
   await dbRef.child('reservations').child(destination).child(formattedDateTime).set({
     'carNumber': carNumber,
     'uid': uid,
-    'expireAt': reservationTimestamp
+    'expireAt': reservationTimestamp,
+    'parked': false
   });
 
   await userReservationsRef.child(formattedDate).child(time).set({

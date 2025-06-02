@@ -67,57 +67,88 @@ export const naverLogin = functions.https.onRequest(
   }
 );
 
-interface ReservationData {
-  expireAt?: number;
-  uid?: string;
-}
+// interface ReservationData {
+//   expireAt?: number;
+//   uid?: string;
+//   parked?: boolean;
+// }
 
-/** 만료된 예약 자동 삭제 */
+/** 만료된 예약 자동 삭제 및 주차 미진입 경고 */
 export const autoDeleteExpiredReservations = onSchedule(
   {
-    schedule: "0 */4 * * *",
+    schedule: "0 */4  * * *",
     region: "asia-northeast3",
     timeZone: "Asia/Seoul",
     retryCount: 3,
   },
   async (): Promise<void> => {
-    const now = new Date();
+    const now = Date.now();
     const updates: Record<string, null> = {};
 
     const globalSnapshot = await db.ref("reservations").once("value");
 
+    const warningUpdates: Promise<void>[] = [];
+
     globalSnapshot.forEach((locationSnap) => {
-      const locationKey = locationSnap.key;
-      const timeSlots: Record<string, ReservationData> = locationSnap.val();
+      const locationKey = locationSnap.key!;
+      const timeSlots: Record<string, any> = locationSnap.val();
 
       Object.entries(timeSlots).forEach(([timeKey, data]) => {
-        if (data?.expireAt && data.expireAt < Date.now()) {
-          updates[`reservations/${locationKey}/${timeKey}`] = null;
+        if (!data?.expireAt) return;
 
+        // 예약 만료되었으면 삭제
+        if (data.expireAt < now) {
           if (data.uid) {
             const [datePart, ...rest] = timeKey.split(" ");
             const timePart = rest.join(" ");
             updates[`users/${data.uid}/reservations/${datePart}/${timePart}`] = null;
           }
+          
+        }
+
+        // expireAt + 15분 지났고 parked가 false인 경우
+        if (data.expireAt + 15 * 60 * 1000 < now && data.parked === false && data.uid) {
+          const userRef = db.ref(`users/${data.uid}`);
+
+          warningUpdates.push(
+            userRef.child("warnings").transaction((current) => {
+              return (current || 0) + 1;
+            }).then(() => {
+              return db.ref(`users/${data.uid}/fcmToken`).once("value");
+            }).then((snap) => {
+              const fcmToken = snap.val();
+              if (!fcmToken) return;
+
+              const message = {
+                token: fcmToken,
+                notification: {
+                  title: "주의 알림",
+                  body: `${locationKey} ${timeKey} 예약 후 15분이 지났지만 주차되지 않았습니다.`,
+                },
+              };
+              return void messaging.send(message);
+            }).catch((err) => {
+              console.error(`경고 알림 또는 증가 실패 (${data.uid}):`, err);
+            })
+          );
         }
       });
     });
 
+    // 사용자 쪽 예약 삭제
     const usersSnapshot = await db.ref("users").once("value");
-
     usersSnapshot.forEach((userSnap) => {
-      const uid = userSnap.key;
+      const uid = userSnap.key!;
       const reservations = userSnap.child("reservations");
 
       if (reservations.exists()) {
         reservations.forEach((dateSnap) => {
-          const dateKey = dateSnap.key;
+          const dateKey = dateSnap.key!;
           dateSnap.forEach((timeSnap) => {
-            const timeKey = timeSnap.key;
-
+            const timeKey = timeSnap.key!;
             const dateTimeStr = `${dateKey} ${timeKey}`;
             const parsedDate = parseKoreanDateTime(dateTimeStr);
-            if (parsedDate && parsedDate < now) {
+            if (parsedDate && parsedDate.getTime() < now) {
               updates[`users/${uid}/reservations/${dateKey}/${timeKey}`] = null;
             }
           });
@@ -133,8 +164,12 @@ export const autoDeleteExpiredReservations = onSchedule(
     } else {
       functions.logger.log("삭제할 만료된 예약 없음");
     }
+
+    // 경고 처리들 실행
+    await Promise.all(warningUpdates);
   }
 );
+
 
 /** 한국어 날짜 파싱 */
 function parseKoreanDateTime(dateTimeStr: string): Date | null {
