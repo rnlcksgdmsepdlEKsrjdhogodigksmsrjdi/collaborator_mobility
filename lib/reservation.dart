@@ -25,8 +25,8 @@ class _ReservationScreenState extends State<ReservationScreen> {
   late int currentYear;
   late int currentMonth;
 
-  final List<String> amTimes = ['1:30', '10:30'];
-  final List<String> pmTimes = ['1:00', '4:30', '8:00', '10:30'];
+  final List<String> amTimes = ['7:12', '12:08'];
+  final List<String> pmTimes = ['12:08', '4:30', '8:00', '10:30'];
 
   // 변경: Map<String, List<String>>로 타입 명시
   Map<String, List<String>> reservedTimes = {};

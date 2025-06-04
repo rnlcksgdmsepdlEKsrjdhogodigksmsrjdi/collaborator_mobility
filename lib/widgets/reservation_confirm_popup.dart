@@ -42,7 +42,8 @@ class ReservationConfirmPopup extends StatelessWidget {
   final time24 = convertTo24Hour(time); 
   final formattedDateTime = '$formattedDate $time24'; 
   final reservationDateTime = DateFormat('yyyy-MM-dd HH:mm').parse(formattedDateTime);
-  final reservationTimestamp = reservationDateTime.millisecondsSinceEpoch;
+  final reservationBeginTimestamp = reservationDateTime.millisecondsSinceEpoch;
+  final reservationExpireTimestamp = reservationDateTime.add(const Duration(hours: 3)).millisecondsSinceEpoch;
 
   final dbRef = FirebaseDatabase.instance.ref();
   final userReservationsRef = dbRef.child('users').child(uid).child('reservations');
@@ -71,14 +72,16 @@ class ReservationConfirmPopup extends StatelessWidget {
   await dbRef.child('reservations').child(destination).child(formattedDateTime).set({
     'carNumber': carNumber,
     'uid': uid,
-    'expireAt': reservationTimestamp,
+    'beginAt': reservationBeginTimestamp,
+    'expireAt': reservationExpireTimestamp,
     'parked': false
   });
 
   await userReservationsRef.child(formattedDate).child(time).set({
     'destination': destination,
     'carNumber': carNumber,
-    'expireAt': reservationTimestamp
+    'beginAt': reservationBeginTimestamp,
+    'expireAt': reservationExpireTimestamp,
   });
 
   ScaffoldMessenger.of(context).showSnackBar(
