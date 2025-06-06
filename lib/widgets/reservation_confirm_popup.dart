@@ -74,7 +74,11 @@ class ReservationConfirmPopup extends StatelessWidget {
     'uid': uid,
     'beginAt': reservationBeginTimestamp,
     'expireAt': reservationExpireTimestamp,
-    'parked': false
+    'parked': false,
+    'lateNotified' : false,
+    'lateYetNotified': false,
+    'notLeftNotified' : false,
+    'notLeftYetNotified' : false,
   });
 
   await userReservationsRef.child(formattedDate).child(time).set({

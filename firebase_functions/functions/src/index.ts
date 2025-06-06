@@ -124,9 +124,9 @@ export const autoDeleteExpiredReservations = onSchedule(
           updates[`users/${data.uid}/reservations/${date}/${time}`] = null;
         }
 
-        // 지각
-        const lateStart = data.beginAt + 15 * 60 * 1000;
-        const lateEnd = data.beginAt + 20 * 60 * 1000;
+        // 지각 알림
+        const lateStart = data.beginAt + 10 * 60 * 1000;
+        const lateEnd = data.beginAt + 15 * 60 * 1000;
         if (
           now >= lateStart &&
           now <= lateEnd &&
@@ -134,12 +134,26 @@ export const autoDeleteExpiredReservations = onSchedule(
           data.lateNotified !== true &&
           data.uid
         ) {
-          warningTasks.push(handleWarningAndNotify(data.uid, reservationLocName, timeKey, "지각 알림", `${reservationLocName} ${timeKey} 예약 후 15분이 지났지만 아직 주차되지 않았습니다.`, `reservations/${reservationLocName}/${timeKey}/lateNotified`));
+          warningTasks.push(handleWarningAndNotify(data.uid, reservationLocName, timeKey, "지각 알림", `${reservationLocName} ${timeKey} 예약 후 10분이 지났지만 아직 주차되지 않았습니다.`, `reservations/${reservationLocName}/${timeKey}/lateNotified`, false));
         }
 
-        // 출고 안됨
-        const notLeftStart = data.expireAt + 15 * 60 * 1000;
-        const notLeftEnd = data.expireAt + 20 * 60 * 1000;
+        // 지각 알림 - 경고 후 예약삭제 
+        const lateYetStart = data.beginAt + 15 * 60 * 1000;
+        const lateYetEnd = data.beginAt + 20 * 60 * 1000;
+        if (
+          now >= lateYetStart &&
+          now <= lateYetEnd &&
+          parkedStatus[locationId] === false &&
+          data.lateYetNotified !== true &&
+          data.uid
+        ) {
+          warningTasks.push(handleWarningAndNotify(data.uid, reservationLocName, timeKey, "지각 알림", `${reservationLocName} ${timeKey} 예약 후 15분이 지났지만 아직 주차되지 않았습니다.`, `reservations/${reservationLocName}/${timeKey}/lateYetNotified`, false));
+          updates[`reservations/${reservationLocName}/${timeKey}`] = null;
+        }
+        
+        // 출고 안됨 경고 알림
+        const notLeftStart = data.expireAt + 10 * 60 * 1000;
+        const notLeftEnd = data.expireAt + 15 * 60 * 1000;
         if (
           now >= notLeftStart &&
           now <= notLeftEnd &&
@@ -147,7 +161,22 @@ export const autoDeleteExpiredReservations = onSchedule(
           data.notLeftNotified !== true &&
           data.uid
         ) {
-          warningTasks.push(handleWarningAndNotify(data.uid, reservationLocName, timeKey, "출고 미완료 알림", `${reservationLocName} ${timeKey} 예약 종료 후 15분이 지났지만 아직 출고되지 않았습니다.`, `reservations/${reservationLocName}/${timeKey}/notLeftNotified`));
+          warningTasks.push(handleWarningAndNotify(data.uid, reservationLocName, timeKey, "출고 미완료 알림", `${reservationLocName} ${timeKey} 예약 종료 후 15분이 지났지만 아직 출고되지 않았습니다.`, `reservations/${reservationLocName}/${timeKey}/notLeftNotified`, false));
+        }
+
+        // 출고 안됨 삭제 알림
+        const notLeftDeleteStart = data.expireAt + 15 * 60 * 1000;
+        const notLeftDeleteEnd = data.expireAt + 20 * 60 * 1000;
+        if (
+          now >= notLeftDeleteStart &&
+          now <= notLeftDeleteEnd &&
+          parkedStatus[locationId] === true &&
+          data.notLeftYetNotified !== true &&
+          data.uid
+        ) {
+          warningTasks.push(handleWarningAndNotify(data.uid, reservationLocName, timeKey, "출고 미완료 알림", `${reservationLocName} ${timeKey} 예약 종료 후 15분이 지났지만 아직 출고되지 않았습니다. 경고가 누적됩니다.`, `reservations/${reservationLocName}/${timeKey}/notLeftYetNotified`, true));
+          updates[`reservations/${reservationLocName}/${timeKey}`] = null;
+          
         }
       });
     });
@@ -191,11 +220,14 @@ async function handleWarningAndNotify(
   time: string,
   title: string,
   body: string,
-  notifiedPath: string
+  notifiedPath: string,
+  addWarning: boolean,
 ): Promise<void> {
   try {
-    await db.ref(`users/${uid}/warnings`).transaction((current) => (current || 0) + 1);
-
+    if(addWarning === true){
+      await db.ref(`users/${uid}/warnings`).transaction((current) => (current || 0) + 1);
+      await checkWarningsAndBan(uid);
+    }
     const tokenSnap = await db.ref(`users/${uid}/fcmToken`).once("value");
     const fcmToken = tokenSnap.val();
 
@@ -298,5 +330,41 @@ async function sendNotification(uid: string, location: string, time: string): Pr
     console.log(`푸시 알림 전송 완료: ${uid}`);
   } catch (error) {
     console.error("푸시 알림 실패:", error);
+  }
+}
+
+export async function checkWarningsAndBan(uid: string): Promise<void> {
+  const updates: Record<string, null> = {};
+
+  try {
+    const warningSnap = await db.ref(`users/${uid}/warnings`).once("value");
+
+    if (warningSnap.exists()) {
+      const warnings: number = warningSnap.val();
+
+      if (warnings >= 3) {
+        // 차량번호 조회
+        const carSnap = await db.ref(`users/${uid}/basicInfo/carNumber`).once("value");
+
+        if (carSnap.exists()) {
+          const carNumber: string = carSnap.val();
+
+          // 해당 차량번호를 bannedCars에 등록
+          await db.ref(`bannedCars/${carNumber}`).set(true);
+        }
+
+        // 사용자 탈퇴 (Firebase DB에서 삭제)
+        updates[`users/${uid}`] = null;
+        await db.ref().update(updates);
+
+        console.log(`User ${uid} has been banned and removed.`);
+      } else {
+        console.log(`User ${uid} has ${warnings} warnings.`);
+      }
+    } else {
+      console.log(`No warning data for user ${uid}.`);
+    }
+  } catch (error) {
+    console.error("checkWarningsAndBan error:", error);
   }
 }

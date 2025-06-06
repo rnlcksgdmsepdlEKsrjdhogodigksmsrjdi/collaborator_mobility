@@ -14,7 +14,7 @@
 
     <application
         android:name="${applicationName}"
-        android:label="mobility"
+        android:label="PIKA EV"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">
 
