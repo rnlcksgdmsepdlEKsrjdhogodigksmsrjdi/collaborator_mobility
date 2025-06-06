@@ -158,90 +158,80 @@ class _ReservationInfoWidgetState extends State<ReservationInfo> {
           backgroundColor: Colors.transparent,
           child: Container(
             width: 236.34.w,
-            height: 230.h,
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: Color(0xFFD9D9D9), width: 1),
             ),
-            child: Stack(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // 메시지
-                Positioned(
-                  top: 80.h,
-                  left: 0.w,
-                  right: 0.w,
-                  child: Center(
-                    child: Text(
-                      '정말 예약을\n취소하시겠습니까?',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 20.sp,
-                        fontFamily: 'Paperlogy',
-                        color: Colors.black,
-                        letterSpacing: -0.5,
-                        height: 1,
-                      ),
-                    ),
+                SizedBox(height: 20.h),
+                Text(
+                  '정말 예약을\n취소하시겠습니까?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 20.sp,
+                    fontFamily: 'Paperlogy',
+                    color: Colors.black,
+                    letterSpacing: -0.5,
+                    height: 1.2,
                   ),
                 ),
-                // 확인 버튼
-                Positioned(
-                  top: 146.h,
-                  left: 18.3.w,
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.pop(context);
-                      onConfirm(); // 실제 예약 취소 처리
-                    },
-                    child: Container(
-                      width: 95.w,
-                      height: 43.h,
-                      decoration: BoxDecoration(
-                        color: Color(0xFF030361),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        '확인',
-                        style: TextStyle(
-                          fontSize: 20.sp,
-                          fontFamily: 'Paperlogy',
-                          color: Colors.white,
-                          letterSpacing: -0.5,
-                          height: 1,
+                SizedBox(height: 40.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // 확인 버튼
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        onConfirm();
+                      },
+                      child: Container(
+                        width: 95.w,
+                        height: 43.h,
+                        decoration: BoxDecoration(
+                          color: Color(0xFF030361),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          '확인',
+                          style: TextStyle(
+                            fontSize: 20.sp,
+                            fontFamily: 'Paperlogy',
+                            color: Colors.white,
+                            letterSpacing: -0.5,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-                // 취소 버튼
-                Positioned(
-                  top: 146.h,
-                  left: 125.3.w,
-                  child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 95.w,
-                      height: 43.h,
-                      decoration: BoxDecoration(
-                        color: Color(0xFFD9D9D9),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        '취소',
-                        style: TextStyle(
-                          fontSize: 20.sp,
-                          fontFamily: 'Paperlogy',
-                          color: Colors.black,
-                          letterSpacing: -0.5,
-                          height: 1,
+                    // 취소 버튼
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        width: 95.w,
+                        height: 43.h,
+                        decoration: BoxDecoration(
+                          color: Color(0xFFD9D9D9),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          '취소',
+                          style: TextStyle(
+                            fontSize: 20.sp,
+                            fontFamily: 'Paperlogy',
+                            color: Colors.black,
+                            letterSpacing: -0.5,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
+                  ],
+                )
               ],
             ),
           ),
