@@ -114,7 +114,7 @@ export const autoDeleteExpiredReservations = onSchedule(
       const locationId = LOCATION_MAPPING[reservationLocName];
       const slots = locSnap.val();
 
-      Object.entries(slots).forEach(([timeKey, data]: [string, any]) => {
+      Object.entries(slots).forEach(async ([timeKey, data]: [string, any]) => {
         if (!data?.expireAt || !data?.beginAt) return;
 
         // 예약 만료
@@ -124,9 +124,39 @@ export const autoDeleteExpiredReservations = onSchedule(
           updates[`users/${data.uid}/reservations/${date}/${time}`] = null;
         }
 
-        // 지각 알림
+        // 입고 확인
         const lateStart = data.beginAt + 10 * 60 * 1000;
         const lateEnd = data.beginAt + 15 * 60 * 1000;
+        if(
+          now >= data.beginAt &&
+          now <= lateStart &&
+          parkedStatus[locationId] === true &&
+          data.notified !== true &&
+          data.uid
+        ) {
+          const tokenSnap = await admin.database().ref(`users/${data.uid}/fcmToken`).once("value");
+          const fcmToken = tokenSnap.val();
+
+          if (fcmToken) {
+            await admin.messaging().send({
+              token: fcmToken,
+              notification: {
+                title: "입고 확인 요청",
+                body: `${reservationLocName} ${timeKey} 주차가 완료되었습니까?`,
+              },
+              data: { // 클라이언트에서 처리할 데이터
+                type: "arrival_confirmation",
+                location: reservationLocName,
+                time: timeKey,
+                uid: data.uid,
+              },
+            });
+          }
+
+          // 중복 알림 방지
+          await admin.database().ref(`reservations/${reservationLocName}/${timeKey}/arrivalNotified`).set(true);
+        }
+        
         if (
           now >= lateStart &&
           now <= lateEnd &&
@@ -134,7 +164,7 @@ export const autoDeleteExpiredReservations = onSchedule(
           data.lateNotified !== true &&
           data.uid
         ) {
-          warningTasks.push(handleWarningAndNotify(data.uid, reservationLocName, timeKey, "지각 알림", `${reservationLocName} ${timeKey} 예약 후 10분이 지났지만 아직 주차되지 않았습니다.`, `reservations/${reservationLocName}/${timeKey}/lateNotified`, false));
+          warningTasks.push(handleWarningAndNotify(data.uid, reservationLocName, timeKey, "지각 알림", `${reservationLocName} ${timeKey} 예약 후 10분이 지났지만 아직 주차되지 않았습니다.`, `reservations/${reservationLocName}/${timeKey}/lateNotified`, false, false));
         }
 
         // 지각 알림 - 경고 후 예약삭제 
@@ -147,7 +177,7 @@ export const autoDeleteExpiredReservations = onSchedule(
           data.lateYetNotified !== true &&
           data.uid
         ) {
-          warningTasks.push(handleWarningAndNotify(data.uid, reservationLocName, timeKey, "지각 알림", `${reservationLocName} ${timeKey} 예약 후 15분이 지났지만 아직 주차되지 않았습니다.`, `reservations/${reservationLocName}/${timeKey}/lateYetNotified`, false));
+          warningTasks.push(handleWarningAndNotify(data.uid, reservationLocName, timeKey, "지각 알림", `${reservationLocName} ${timeKey} 예약 후 15분이 지났지만 아직 주차되지 않았습니다.`, `reservations/${reservationLocName}/${timeKey}/lateYetNotified`, true, true));
           updates[`reservations/${reservationLocName}/${timeKey}`] = null;
         }
         
@@ -161,7 +191,7 @@ export const autoDeleteExpiredReservations = onSchedule(
           data.notLeftNotified !== true &&
           data.uid
         ) {
-          warningTasks.push(handleWarningAndNotify(data.uid, reservationLocName, timeKey, "출고 미완료 알림", `${reservationLocName} ${timeKey} 예약 종료 후 15분이 지났지만 아직 출고되지 않았습니다.`, `reservations/${reservationLocName}/${timeKey}/notLeftNotified`, false));
+          warningTasks.push(handleWarningAndNotify(data.uid, reservationLocName, timeKey, "출고 미완료 알림", `${reservationLocName} ${timeKey} 예약 종료 후 10분이 지났지만 아직 출고되지 않았습니다.`, `reservations/${reservationLocName}/${timeKey}/notLeftNotified`, false, false));
         }
 
         // 출고 안됨 삭제 알림
@@ -174,7 +204,7 @@ export const autoDeleteExpiredReservations = onSchedule(
           data.notLeftYetNotified !== true &&
           data.uid
         ) {
-          warningTasks.push(handleWarningAndNotify(data.uid, reservationLocName, timeKey, "출고 미완료 알림", `${reservationLocName} ${timeKey} 예약 종료 후 15분이 지났지만 아직 출고되지 않았습니다. 경고가 누적됩니다.`, `reservations/${reservationLocName}/${timeKey}/notLeftYetNotified`, true));
+          warningTasks.push(handleWarningAndNotify(data.uid, reservationLocName, timeKey, "출고 미완료 알림", `${reservationLocName} ${timeKey} 예약 종료 후 15분이 지났지만 아직 출고되지 않았습니다. 경고가 누적됩니다.`, `reservations/${reservationLocName}/${timeKey}/notLeftYetNotified`, true, true));
           updates[`reservations/${reservationLocName}/${timeKey}`] = null;
           
         }
@@ -222,12 +252,17 @@ async function handleWarningAndNotify(
   body: string,
   notifiedPath: string,
   addWarning: boolean,
+  shouldDeleteReservation: boolean
 ): Promise<void> {
   try {
-    if(addWarning === true){
-      await db.ref(`users/${uid}/warnings`).transaction((current) => (current || 0) + 1);
+    if (addWarning) {
+      await db.ref(`users/${uid}/warnings`).transaction((current) => {
+        return (current || 0) + 1;
+      });
+
       await checkWarningsAndBan(uid);
     }
+
     const tokenSnap = await db.ref(`users/${uid}/fcmToken`).once("value");
     const fcmToken = tokenSnap.val();
 
@@ -235,11 +270,15 @@ async function handleWarningAndNotify(
       await messaging.send({ token: fcmToken, notification: { title, body } });
     }
 
-    await db.ref(notifiedPath).set(true);
+    // 플래그 저장은 예약 삭제 안 할 때만
+    if (!shouldDeleteReservation) {
+      await db.ref(notifiedPath).set(true);
+    }
   } catch (err) {
     console.error(`알림 또는 경고 처리 실패 (${uid}):`, err);
   }
 }
+
 
 /** 임시 비밀번호 생성 함수 */
 function generateRandomPassword(): string {
@@ -333,38 +372,47 @@ async function sendNotification(uid: string, location: string, time: string): Pr
   }
 }
 
-export async function checkWarningsAndBan(uid: string): Promise<void> {
-  const updates: Record<string, null> = {};
-
+async function checkWarningsAndBan(uid: string): Promise<void> {
   try {
+    console.log(`Checking warnings for user: ${uid}`);
+    
+    // 경고 횟수 조회
     const warningSnap = await db.ref(`users/${uid}/warnings`).once("value");
+    const currentWarnings = warningSnap.exists() ? warningSnap.val() : 0;
+    
+    console.log(`Current warnings: ${currentWarnings}`);
 
-    if (warningSnap.exists()) {
-      const warnings: number = warningSnap.val();
+    if (currentWarnings >= 3) {
+      // 차량번호 리스트 조회 (단일 값 또는 배열 모두 처리)
+      const carSnap = await db.ref(`users/${uid}/additionalInfo/carNumbers`).once("value");
+      const carNumbersData = carSnap.exists() ? carSnap.val() : null;
 
-      if (warnings >= 3) {
-        // 차량번호 조회
-        const carSnap = await db.ref(`users/${uid}/basicInfo/carNumber`).once("value");
+      let carNumbers: string[] = [];
 
-        if (carSnap.exists()) {
-          const carNumber: string = carSnap.val();
-
-          // 해당 차량번호를 bannedCars에 등록
-          await db.ref(`bannedCars/${carNumber}`).set(true);
-        }
-
-        // 사용자 탈퇴 (Firebase DB에서 삭제)
-        updates[`users/${uid}`] = null;
-        await db.ref().update(updates);
-
-        console.log(`User ${uid} has been banned and removed.`);
-      } else {
-        console.log(`User ${uid} has ${warnings} warnings.`);
+      if (carNumbersData && typeof carNumbersData === 'object') {
+        carNumbers = Object.values(carNumbersData)
+                          .filter((v): v is string => typeof v === 'string');
       }
-    } else {
-      console.log(`No warning data for user ${uid}.`);
+      // 모든 차량번호를 bannedCars에 등록
+      if (carNumbers.length > 0) {
+        const banUpdates: Record<string, any> = {};
+        const banTimestamp = Date.now();
+        
+        carNumbers.forEach(carNumber => {
+          banUpdates[`bannedCars/${carNumber}`] = {
+            bannedAt: banTimestamp,
+            uid: uid,
+          };
+        });
+
+        await db.ref().update(banUpdates);
+        console.log(`Banned ${carNumbers.length} cars: ${carNumbers.join(', ')}`);
+      } else {
+        console.log(`No valid car numbers found for user ${uid}`);
+      }
     }
   } catch (error) {
     console.error("checkWarningsAndBan error:", error);
+    throw error;
   }
 }

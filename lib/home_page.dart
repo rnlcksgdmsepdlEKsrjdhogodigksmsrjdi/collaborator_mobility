@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:mobility/ban_user.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../widgets/menu_overlay.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -35,6 +36,7 @@ class _MapWithBottomSheetPageState extends State<MapWithBottomSheetPage>
     _initAnimation();
     _loadUserName(); // 앱 시작 시 사용자 이름 로드
     _initFirebaseMessaging();
+    BanChecker.checkAndBanUser(context);
   }
 
   void _initWebView() {
