@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class BanChecker {
   static Future<void> checkAndBanUser(BuildContext context) async {
@@ -22,22 +23,10 @@ class BanChecker {
           final bannedUid = carData['uid'];
 
           if (bannedUid == userId) {
-            // 🚫 이 사용자에 대한 제재 조치 수행
-            await showDialog(
-              context: context,
-              builder: (_) => AlertDialog(
-                title: const Text('이용 불가'),
-                content: const Text('경고 3회 누적으로 인해 탈퇴 처리되었습니다.'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('확인'),
-                  ),
-                ],
-              ),
-            );
+            // 이 사용자에 대한 제재 조치 수행
+            await showBannedDialog(context);
 
-            // 🔥 사용자 데이터 삭제
+            // 사용자 데이터 삭제
             await FirebaseDatabase.instance.ref('users/$userId').remove();
             await user!.delete();
 
@@ -59,5 +48,82 @@ class BanChecker {
         );
       }
     }
+  }
+
+  static Future<void> showBannedDialog(BuildContext context) async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const BannedDialog(),
+    );
+  }
+}
+
+
+
+class BannedDialog extends StatelessWidget {
+  const BannedDialog({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        width: 236.34.w,
+        height: 230.h,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: Colors.white,
+          border: Border.all(color: const Color(0xFFD9D9D9), width: 1),
+        ),
+        child: Stack(
+          children: [
+            // 메시지
+            Positioned(
+              top: 95.h,
+              left: 28.w,
+              right: 28.w,
+              child: Text(
+                '경고 3회 누적되어\n이용이 정지되었습니다.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Paperlogy',
+                  fontSize: 20.sp,
+                  letterSpacing: -0.5,
+                  color: Colors.black,
+                  height: 1,
+                ),
+              ),
+            ),
+            // '예' 버튼 (확인)
+            Positioned(
+              top: 157.h,
+              left: 70.w, // 가운데 배치
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(
+                  width: 95.w,
+                  height: 43.h,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF030361),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '예',
+                    style: TextStyle(
+                      fontFamily: 'Paperlogy',
+                      fontSize: 20.sp,
+                      color: Colors.white,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

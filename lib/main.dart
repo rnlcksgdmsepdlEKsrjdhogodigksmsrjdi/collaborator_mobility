@@ -9,6 +9,7 @@ import 'user_info.dart';
 import 'home_page.dart';
 import 'login_page.dart';
 import 'my_page_screen.dart';
+import 'fcm_handler.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -81,27 +82,40 @@ class _SplashEntryScreenState extends State<SplashEntryScreen> {
   }
 }
 
-class AppStartupScreen extends StatelessWidget {
+class AppStartupScreen extends StatefulWidget {
   const AppStartupScreen({super.key});
 
-  // 모든 사용자에 대해 추가 정보 필요 여부 확인 (SNS/이메일 공통)
+  @override
+  State<AppStartupScreen> createState() => _AppStartupScreenState();
+}
+
+class _AppStartupScreenState extends State<AppStartupScreen> {
+  final FCMHandler _fcmHandler = FCMHandler(); // FCM 핸들러 선언
+
+  @override
+  void initState() {
+    super.initState();
+
+    // FCM 초기화 및 메시지 처리 등록
+    _fcmHandler.initializeFCM(context);
+  }
+
+  // 추가 정보 필요 여부 확인
   Future<bool> _requiresAdditionalInfo(String userId) async {
     try {
       final snapshot = await FirebaseDatabase.instance
           .ref('users/$userId/additionalInfo')
           .get();
 
-      // 필수 필드(name, phone, carNumbers)가 모두 존재하는지 확인
       final hasAdditionalInfo = snapshot.exists &&
           snapshot.child('name').exists &&
           snapshot.child('phone').exists &&
           snapshot.child('carNumbers').exists;
 
-      // 추가 정보가 없으면 true 반환 (정보 입력 필요)
       return !hasAdditionalInfo;
     } catch (e) {
       debugPrint('❌ 추가 정보 확인 오류: $e');
-      return true; // 오류 발생 시 안전하게 추가 정보 입력 화면으로
+      return true;
     }
   }
 
@@ -110,18 +124,15 @@ class AppStartupScreen extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, authSnapshot) {
-        // 인증 상태 로딩 중
         if (authSnapshot.connectionState == ConnectionState.waiting) {
           return const LoadingScreen();
         }
 
-        // 로그인 상태 확인
         final user = authSnapshot.data;
         if (user == null) {
           return const LoginPage();
         }
 
-        // 추가 정보 필요 여부 확인 (SNS/이메일 동일 조건)
         return FutureBuilder<bool>(
           future: _requiresAdditionalInfo(user.uid),
           builder: (context, infoSnapshot) {
@@ -129,7 +140,6 @@ class AppStartupScreen extends StatelessWidget {
               return const LoadingScreen();
             }
 
-            // 추가 정보가 필요하면 정보 입력 화면, 아니면 홈 화면
             return infoSnapshot.data == true
                 ? UserInfoScreen(userId: user.uid)
                 : const MapWithBottomSheetPage();

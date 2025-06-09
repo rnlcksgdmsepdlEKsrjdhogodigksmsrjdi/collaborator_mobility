@@ -77,7 +77,6 @@ function parseKoreanDateTime(dateTimeStr: string): Date | null {
   return isNaN(parsed.getTime()) ? null : parsed;
 }
 
-/** 예약 만료 및 경고 자동 처리 */
 export const autoDeleteExpiredReservations = onSchedule(
   {
     schedule: "* * * * *",
@@ -90,53 +89,59 @@ export const autoDeleteExpiredReservations = onSchedule(
     const updates: Record<string, null> = {};
     const warningTasks: Promise<void>[] = [];
 
-    // 위치 매핑 테이블
     const LOCATION_MAPPING: Record<string, string> = {
       '조선대학교 IT융합대학' : 'location1',
       '조선대학교 중앙도서관' : 'location2',
       '조선대학교 해오름관' : 'location3'
-    }
+    };
 
     const locationSnap = await db.ref("location").once("value");
     const parkedStatus: Record<string, boolean> = {};
+    const carNumberInputStatus: Record<string, boolean> = {};
 
-    locationSnap.forEach((locSnap)=> {
+    locationSnap.forEach((locSnap) => {
       const locKey = locSnap.key!;
-      if(locSnap.child("parked").exists()) {
-        parkedStatus[locKey] = locSnap.child("parked").val();
-      }
-    })
+      parkedStatus[locKey] = locSnap.child("parked").val() === true;
+      carNumberInputStatus[locKey] = locSnap.child("carNumberInput").val() === true;
+    });
 
     const reservationSnap = await db.ref("reservations").once("value");
 
-    reservationSnap.forEach((locSnap) => {
-      const reservationLocName = locSnap.key!;
+    for (const reservationLocName in reservationSnap.val() || {}) {
       const locationId = LOCATION_MAPPING[reservationLocName];
-      const slots = locSnap.val();
+      const slots = reservationSnap.child(reservationLocName);
 
-      Object.entries(slots).forEach(async ([timeKey, data]: [string, any]) => {
-        if (!data?.expireAt || !data?.beginAt) return;
+      for (const timeKey in slots.val() || {}) {
+        const data = slots.child(timeKey).val();
+        if (!data?.expireAt || !data?.beginAt) continue;
 
-        // 예약 만료
-        if (data.expireAt < now && data.uid) {
-          const [date, ...rest] = timeKey.split(" ");
-          const time = rest.join(" ");
-          updates[`users/${data.uid}/reservations/${date}/${time}`] = null;
+        const beginAt = data.beginAt;
+        const expireAt = data.expireAt;
+        const uid = data.uid;
+        const carNumberInput = carNumberInputStatus[locationId] || false;
+
+        const [date, ...rest] = timeKey.split(" ");
+        const time = rest.join(" ");
+
+        // ✅ 1. 유저 데이터 삭제 (만료)
+        if (expireAt < now && uid) {
+          updates[`users/${uid}/reservations/${date}/${time}`] = null;
         }
 
-        // 입고 확인
-        const lateStart = data.beginAt + 10 * 60 * 1000;
-        const lateEnd = data.beginAt + 15 * 60 * 1000;
-        if(
-          now >= data.beginAt &&
-          now <= lateStart &&
-          parkedStatus[locationId] === true &&
-          data.notified !== true &&
-          data.uid
-        ) {
-          const tokenSnap = await admin.database().ref(`users/${data.uid}/fcmToken`).once("value");
-          const fcmToken = tokenSnap.val();
+        const lateStart = beginAt + 10 * 60 * 1000;
+        const lateEnd = beginAt + 15 * 60 * 1000;
+        const lateYetStart = beginAt + 15 * 60 * 1000;
+        const lateYetEnd = beginAt + 20 * 60 * 1000;
+        const notLeftStart = expireAt + 10 * 60 * 1000;
+        const notLeftEnd = expireAt + 15 * 60 * 1000;
+        const notLeftDeleteStart = expireAt + 15 * 60 * 1000;
+        const notLeftDeleteEnd = expireAt + 20 * 60 * 1000;
+        const departureDeadline = expireAt + 15 * 60 * 1000;
 
+        // ✅ 2. 입고 확인 요청
+        if (now >= beginAt && now <= lateStart && parkedStatus[locationId] && !data.notified && uid && !carNumberInput) {
+          const tokenSnap = await db.ref(`users/${uid}/fcmToken`).once("value");
+          const fcmToken = tokenSnap.val();
           if (fcmToken) {
             await admin.messaging().send({
               token: fcmToken,
@@ -144,79 +149,72 @@ export const autoDeleteExpiredReservations = onSchedule(
                 title: "입고 확인 요청",
                 body: `${reservationLocName} ${timeKey} 주차가 완료되었습니까?`,
               },
-              data: { // 클라이언트에서 처리할 데이터
+              data: {
                 type: "arrival_confirmation",
-                location: reservationLocName,
+                location: locationId,
                 time: timeKey,
-                uid: data.uid,
+                uid: uid,
+                showdialog: "true",
+              },
+            });
+          }
+          await db.ref(`reservations/${reservationLocName}/${timeKey}/arrivalNotified`).set(true);
+        }
+
+        // ✅ 3. 지각 알림
+        if (now >= lateStart && now <= lateEnd && !parkedStatus[locationId] && !data.lateNotified && uid && !carNumberInput) {
+          warningTasks.push(handleWarningAndNotify(uid, reservationLocName, timeKey, "지각 알림", `${reservationLocName} ${timeKey} 예약 후 10분이 지났지만 아직 주차되지 않았습니다.`, `reservations/${reservationLocName}/${timeKey}/lateNotified`, false, false));
+        }
+
+        // ✅ 4. 지각 이후 경고 및 삭제
+        if (now >= lateYetStart && now <= lateYetEnd && !parkedStatus[locationId] && !data.lateYetNotified && uid && !carNumberInput) {
+          warningTasks.push(handleWarningAndNotify(uid, reservationLocName, timeKey, "지각 알림", `${reservationLocName} ${timeKey} 예약 후 15분이 지났지만 아직 주차되지 않았습니다.`, `reservations/${reservationLocName}/${timeKey}/lateYetNotified`, true, true));
+          updates[`reservations/${reservationLocName}/${timeKey}`] = null;
+        }
+
+        // ✅ 5. 출고 미완료 경고
+        if (now >= notLeftStart && now <= notLeftEnd && parkedStatus[locationId] && !data.notLeftNotified && carNumberInput && uid) {
+          warningTasks.push(handleWarningAndNotify(uid, reservationLocName, timeKey, "출고 미완료 알림", `${reservationLocName} ${timeKey} 예약 종료 후 10분이 지났지만 아직 출고되지 않았습니다.`, `reservations/${reservationLocName}/${timeKey}/notLeftNotified`, false, false));
+        }
+
+        // ✅ 6. 출고 미완료 → 경고 + 삭제
+        if (now >= notLeftDeleteStart && now <= notLeftDeleteEnd && parkedStatus[locationId] && !data.notLeftYetNotified && carNumberInput && uid) {
+          warningTasks.push(handleWarningAndNotify(uid, reservationLocName, timeKey, "출고 미완료 알림", `${reservationLocName} ${timeKey} 예약 종료 후 15분이 지났지만 아직 출고되지 않았습니다. 경고가 누적됩니다.`, `reservations/${reservationLocName}/${timeKey}/notLeftYetNotified`, true, true));
+          updates[`reservations/${reservationLocName}/${timeKey}`] = null;
+          updates[`location/${locationId}/carNumberInput`] = null;
+        }
+
+        // ✅ 7. 정상 출고 완료 → 알림 + 삭제
+        if (now >= beginAt && now <= departureDeadline && !parkedStatus[locationId] && !data.departureNotified && carNumberInput && uid) {
+          const tokenSnap = await db.ref(`users/${uid}/fcmToken`).once("value");
+          const fcmToken = tokenSnap.val();
+          if (fcmToken) {
+            await admin.messaging().send({
+              token: fcmToken,
+              notification: {
+                title: "출고 완료",
+                body: `${reservationLocName} ${timeKey} 예약 차량이 출고되었습니다.`,
+              },
+              data: {
+                type: "departure_complete",
+                location: locationId,
+                time: timeKey,
+                uid: uid,
+                showdialog: "false",
               },
             });
           }
 
-          // 중복 알림 방지
-          await admin.database().ref(`reservations/${reservationLocName}/${timeKey}/arrivalNotified`).set(true);
-        }
-        
-        if (
-          now >= lateStart &&
-          now <= lateEnd &&
-          parkedStatus[locationId] === false &&
-          data.lateNotified !== true &&
-          data.uid
-        ) {
-          warningTasks.push(handleWarningAndNotify(data.uid, reservationLocName, timeKey, "지각 알림", `${reservationLocName} ${timeKey} 예약 후 10분이 지났지만 아직 주차되지 않았습니다.`, `reservations/${reservationLocName}/${timeKey}/lateNotified`, false, false));
-        }
-
-        // 지각 알림 - 경고 후 예약삭제 
-        const lateYetStart = data.beginAt + 15 * 60 * 1000;
-        const lateYetEnd = data.beginAt + 20 * 60 * 1000;
-        if (
-          now >= lateYetStart &&
-          now <= lateYetEnd &&
-          parkedStatus[locationId] === false &&
-          data.lateYetNotified !== true &&
-          data.uid
-        ) {
-          warningTasks.push(handleWarningAndNotify(data.uid, reservationLocName, timeKey, "지각 알림", `${reservationLocName} ${timeKey} 예약 후 15분이 지났지만 아직 주차되지 않았습니다.`, `reservations/${reservationLocName}/${timeKey}/lateYetNotified`, true, true));
           updates[`reservations/${reservationLocName}/${timeKey}`] = null;
+          updates[`location/${locationId}/carNumberInput`] = null;
         }
-        
-        // 출고 안됨 경고 알림
-        const notLeftStart = data.expireAt + 10 * 60 * 1000;
-        const notLeftEnd = data.expireAt + 15 * 60 * 1000;
-        if (
-          now >= notLeftStart &&
-          now <= notLeftEnd &&
-          parkedStatus[locationId] === true &&
-          data.notLeftNotified !== true &&
-          data.uid
-        ) {
-          warningTasks.push(handleWarningAndNotify(data.uid, reservationLocName, timeKey, "출고 미완료 알림", `${reservationLocName} ${timeKey} 예약 종료 후 10분이 지났지만 아직 출고되지 않았습니다.`, `reservations/${reservationLocName}/${timeKey}/notLeftNotified`, false, false));
-        }
+      }
+    }
 
-        // 출고 안됨 삭제 알림
-        const notLeftDeleteStart = data.expireAt + 15 * 60 * 1000;
-        const notLeftDeleteEnd = data.expireAt + 20 * 60 * 1000;
-        if (
-          now >= notLeftDeleteStart &&
-          now <= notLeftDeleteEnd &&
-          parkedStatus[locationId] === true &&
-          data.notLeftYetNotified !== true &&
-          data.uid
-        ) {
-          warningTasks.push(handleWarningAndNotify(data.uid, reservationLocName, timeKey, "출고 미완료 알림", `${reservationLocName} ${timeKey} 예약 종료 후 15분이 지났지만 아직 출고되지 않았습니다. 경고가 누적됩니다.`, `reservations/${reservationLocName}/${timeKey}/notLeftYetNotified`, true, true));
-          updates[`reservations/${reservationLocName}/${timeKey}`] = null;
-          
-        }
-      });
-    });
-
-    // 사용자 예약 만료 확인
+    // ✅ 8. 사용자 예약에서 과거 데이터 삭제
     const usersSnap = await db.ref("users").once("value");
-    usersSnap.forEach((userSnap) => {
-      const uid = userSnap.key!;
-      const reservations = userSnap.child("reservations");
-
+    for (const uid of Object.keys(usersSnap.val() || {})) {
+      const reservations = usersSnap.child(uid).child("reservations");
       if (reservations.exists()) {
         reservations.forEach((dateSnap) => {
           const dateKey = dateSnap.key!;
@@ -230,18 +228,20 @@ export const autoDeleteExpiredReservations = onSchedule(
           });
         });
       }
-    });
+    }
 
+    // ✅ 업데이트 실행
     if (Object.keys(updates).length > 0) {
       await db.ref().update(updates);
-      functions.logger.log("만료된 예약 삭제 완료", { deletedCount: Object.keys(updates).length });
+      functions.logger.log("만료된 예약 및 관련 데이터 삭제 완료", { deletedCount: Object.keys(updates).length });
     } else {
-      functions.logger.log("삭제할 만료된 예약 없음");
+      functions.logger.log("삭제할 데이터 없음");
     }
 
     await Promise.all(warningTasks);
   }
 );
+
 
 /** 경고 처리 및 푸시 알림 전송 */
 async function handleWarningAndNotify(
