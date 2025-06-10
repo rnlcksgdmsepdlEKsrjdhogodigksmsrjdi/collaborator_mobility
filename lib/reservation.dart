@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
@@ -317,23 +318,66 @@ class _ReservationScreenState extends State<ReservationScreen> {
                         }).toList(),
                       ),
                       const SizedBox(height: 20),
-                      // 차량 번호 선택
                       if (carNumbers.isNotEmpty)
-                        DropdownButton<String>(
-                          value: selectedCarNumber,
-                          onChanged: (String? newValue) {
-                            setState(() {
-                              selectedCarNumber = newValue;
-                            });
-                          },
-                          items: carNumbers.map<DropdownMenuItem<String>>((String carNumber) {
-                            return DropdownMenuItem<String>(
-                              value: carNumber,
-                              child: Text(carNumber),
-                            );
-                          }).toList(),
-                          hint: Text('차량 번호 선택'),
+                        DropdownButtonHideUnderline(
+                          child: DropdownButton2<String>(
+                            isExpanded: true,
+                            value: selectedCarNumber,
+                            hint: Text(
+                              '차량 번호 선택',
+                              style: TextStyle(
+                                fontFamily: 'Paperlogy',
+                                fontSize: 12.sp,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            items: carNumbers.map((String carNumber) {
+                              return DropdownMenuItem<String>(
+                                value: carNumber,
+                                child: Text(
+                                  carNumber,
+                                  style: TextStyle(
+                                    fontFamily: 'Paperlogy',
+                                    fontSize: 12.sp,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (String? newValue) {
+                              setState(() {
+                                selectedCarNumber = newValue;
+                              });
+                            },
+                            buttonStyleData: ButtonStyleData(
+                              height: 40.h,
+                              width: 155.w,
+                              padding: EdgeInsets.symmetric(horizontal: 12.w),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFD9D9D9)),
+                              ),
+                            ),
+                            dropdownStyleData: DropdownStyleData(
+                              maxHeight: 200.h,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFFFFF),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              offset: const Offset(0, -2),
+                            ),
+                            iconStyleData: IconStyleData(
+                              icon: const Icon(Icons.arrow_drop_down),
+                              iconSize: 24.sp,
+                            ),
+                            menuItemStyleData: MenuItemStyleData(
+                              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                              overlayColor: MaterialStateProperty.all(Colors.grey.withOpacity(0.1)),
+                            ),
+                          ),
                         ),
+
                     ],
                   ),
                 ),

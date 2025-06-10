@@ -76,14 +76,12 @@ class BannedDialog extends StatelessWidget {
           color: Colors.white,
           border: Border.all(color: const Color(0xFFD9D9D9), width: 1),
         ),
-        child: Stack(
-          children: [
-            // 메시지
-            Positioned(
-              top: 95.h,
-              left: 28.w,
-              right: 28.w,
-              child: Text(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 28.w),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
                 '경고 3회 누적되어\n이용이 정지되었습니다.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -94,12 +92,8 @@ class BannedDialog extends StatelessWidget {
                   height: 1,
                 ),
               ),
-            ),
-            // '예' 버튼 (확인)
-            Positioned(
-              top: 157.h,
-              left: 70.w, // 가운데 배치
-              child: GestureDetector(
+              SizedBox(height: 40.h),
+              GestureDetector(
                 onTap: () => Navigator.of(context).pop(),
                 child: Container(
                   width: 95.w,
@@ -120,8 +114,8 @@ class BannedDialog extends StatelessWidget {
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
