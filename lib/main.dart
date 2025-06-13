@@ -10,13 +10,15 @@ import 'home_page.dart';
 import 'login_page.dart';
 import 'my_page_screen.dart';
 import 'fcm_handler.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
   await Firebase.initializeApp();
   await NaverLoginSDK.initialize(
-    clientId: 'IGdjiddEnJx86dWfnGW0',
-    clientSecret: 'dX02epXz4L',
+    clientId: dotenv.env['NAVER_CLIENT_ID']!,
+    clientSecret: dotenv.env['NAVER_CLIENT_SECRET']!,
   );
   
     runApp(
